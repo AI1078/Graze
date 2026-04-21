@@ -638,89 +638,62 @@ function setProgress(text, step) {
 }
  
 // ═══════════════════════════════════════════════════════
-//  ANTHROPIC API CALL
-//  Sends the menu (image, PDF, or text) to Claude and gets
-//  back a JSON array of parsed + nutrition-estimated items.
+//  ANTHROPIC API CALL — STREAMING
+//  Worker pipes Anthropic's SSE stream straight through.
+//  We read chunks, accumulate text, parse JSON at the end.
+//  No Cloudflare timeout because data flows continuously.
 // ═══════════════════════════════════════════════════════
 async function callClaude(menuText, file, customRequest) {
-  const systemPrompt = `You are a menu analysis expert and nutrition estimator.
+  const systemPrompt = `You are a menu analysis and nutrition estimation expert. Extract every food and drink item from the menu. For each, estimate nutrition using standard restaurant portion sizes. Return ONLY a valid JSON array — no markdown, no explanation.
  
-Your job:
-1. Extract EVERY food and drink item from the menu provided (image, PDF, or text).
-2. For each item, estimate nutritional values using your knowledge of typical ingredients, cooking methods, and standard restaurant portion sizes. Do NOT skip items just because calorie info isn't on the menu — estimate it.
-3. Identify dietary tags from ingredients and context.
-4. Return ONLY a valid JSON array. No markdown, no explanation, no backticks.
+Each object: {"name":"","description":"","calories":null,"calories_estimated":true,"protein":null,"protein_estimated":true,"carbs":null,"fat":null,"price":null,"tags":[],"note":""}
  
-For each item return this exact object shape:
-{
-  "name": "Item name as written on menu",
-  "description": "Brief ingredient/description if available, else empty string",
-  "calories": number or null,
-  "calories_estimated": true or false,
-  "protein": number (grams) or null,
-  "protein_estimated": true or false,
-  "carbs": number (grams) or null,
-  "fat": number (grams) or null,
-  "price": number or null,
-  "tags": [],
-  "note": "optional short note about estimation assumptions"
-}
+Tags (exact strings only): halal, kosher, vegan, vegetarian, gluten free, dairy free, no pork, contains pork, contains shellfish, contains dairy, contains nuts, nut free, budget friendly, spicy, high protein
+budget friendly = price ≤ 12. high protein = protein ≥ 30.
  
-Tags must come from this exact list only (use as many as apply):
-halal, kosher, vegan, vegetarian, gluten free, dairy free, no pork, contains pork, contains shellfish, contains dairy, contains nuts, nut free, budget friendly, spicy, high protein
+Portions: chicken breast 6oz=280cal/53g, steak 6oz=350cal/34g, salmon 6oz=350cal/34g, shrimp 6oz=170cal/26g, pasta 1cup=220cal/8g, rice 1cup=200cal/4g. Add sauces/oils/sides as appropriate. Always set _estimated:true unless the menu explicitly states the value. Keep description and note to 1 short sentence or empty.
  
-Budget friendly = price exists and is $12 or under.
-High protein = estimated protein >= 30g.
- 
-Estimation rules:
-- Use standard restaurant portion sizes (e.g. 6oz chicken breast, 8oz steak, 1 cup pasta).
-- Grilled chicken breast ~165 cal, ~31g protein per 6oz.
-- Beef steak ~250-350 cal, ~26-35g protein per 6oz depending on cut.
-- Salmon fillet ~350 cal, ~34g protein per 6oz.
-- Rice (1 cup cooked) ~200 cal, ~4g protein.
-- Pasta (1 cup) ~220 cal, ~8g protein.
-- Vegetables ~25-80 cal per serving.
-- Add sauces, oils, cheese, bread as appropriate.
-- Always set calories_estimated: true if not explicitly stated on the menu.
-- Always set protein_estimated: true if not explicitly stated on the menu.
- 
-If the custom request is provided, note it but still return ALL items — filtering happens client-side.
- 
-Return ONLY the JSON array. Start with [ and end with ].`;
+Return ONLY the JSON array. Start with [ end with ].`;
  
   const userContent = [];
- 
-  // Attach the file if provided
   if (file) {
     if (file.isImage) {
-      userContent.push({
-        type: 'image',
-        source: { type: 'base64', media_type: file.mediaType, data: file.base64 }
-      });
-      userContent.push({ type: 'text', text: `This is a photo of a restaurant menu. Extract and analyze every food and drink item on it.${customRequest ? ' Custom request context: ' + customRequest : ''}` });
+      userContent.push({ type:'image', source:{ type:'base64', media_type:file.mediaType, data:file.base64 }});
+      userContent.push({ type:'text', text:`This is a photo of a restaurant menu. Extract and analyze every food and drink item.${customRequest?' Custom context: '+customRequest:''}` });
     } else if (file.isPDF) {
-      userContent.push({
-        type: 'document',
-        source: { type: 'base64', media_type: 'application/pdf', data: file.base64 }
-      });
-      userContent.push({ type: 'text', text: `This is a PDF of a restaurant menu. Extract and analyze every food and drink item on it.${customRequest ? ' Custom request context: ' + customRequest : ''}` });
+      userContent.push({ type:'document', source:{ type:'base64', media_type:'application/pdf', data:file.base64 }});
+      userContent.push({ type:'text', text:`This is a PDF menu. Extract and analyze every food and drink item.${customRequest?' Custom context: '+customRequest:''}` });
     }
   } else {
-    // Plain text menu
-    userContent.push({
-      type: 'text',
-      text: `Here is the menu text:\n\n${menuText}\n\n${customRequest ? 'Custom request context: ' + customRequest : ''}\n\nExtract and analyze every food and drink item.`
-    });
+    userContent.push({ type:'text', text:`Menu:\n\n${menuText}\n\n${customRequest?'Custom context: '+customRequest+'\n\n':''}Extract and analyze every item.` });
   }
  
+  // ── Dynamic max_tokens ──────────────────────────────
+  let estimatedItems = 40;
+  if (!file && menuText) {
+    const lines = menuText.split('\n').filter(l => l.trim().length > 3);
+    estimatedItems = Math.max(lines.length, 10);
+  } else if (file) {
+    const b64kb = file.base64.length / 1024;
+    if      (b64kb < 500)  estimatedItems = 20;
+    else if (b64kb < 1000) estimatedItems = 35;
+    else if (b64kb < 2000) estimatedItems = 55;
+    else if (b64kb < 3000) estimatedItems = 75;
+    else                   estimatedItems = 100;
+  }
+  const dynamicTokens = Math.min(Math.max(Math.ceil(estimatedItems * 175) + 500, 2000), 12000);
+  setProgress('Reading menu...', `~${estimatedItems} items estimated · ${dynamicTokens.toLocaleString()} tokens`);
+ 
+  // ── Streaming fetch ─────────────────────────────────
   const response = await fetch('https://graze-api.sharjeel1078.workers.dev', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: dynamicTokens,
       system: systemPrompt,
-      messages: [{ role: 'user', content: userContent }]
+      messages: [{ role:'user', content:userContent }]
+      // worker automatically adds stream:true
     })
   });
  
@@ -729,55 +702,73 @@ Return ONLY the JSON array. Start with [ and end with ].`;
     throw new Error(err?.error?.message || `API error ${response.status}`);
   }
  
-  const data = await response.json();
-  const raw  = data.content?.find(b => b.type === 'text')?.text || '[]';
+  // ── Read SSE stream ─────────────────────────────────
+  // Anthropic sends: "data: {type:'content_block_delta', delta:{text:'...'}}"
+  // We collect all text deltas and assemble the full JSON string.
+  const reader  = response.body.getReader();
+  const decoder = new TextDecoder();
+  let raw    = '';
+  let done   = false;
+  let count  = 0;
+  let buffer = ''; // handles chunks that split across SSE lines
  
-  // Clean markdown fences if present
-  let cleaned = raw.trim()
-    .replace(/^```json\s*/i, '')
-    .replace(/^```/, '')
-    .replace(/```$/, '')
-    .trim();
+  while (!done) {
+    const { value, done: streamDone } = await reader.read();
+    done = streamDone;
+    if (!value) continue;
  
-  // Attempt 1: straight parse
-  try {
-    return JSON.parse(cleaned);
-  } catch (e1) {
-    // Attempt 2: response was truncated mid-JSON — salvage complete objects
-    // Find the last complete object by locating the last "},\n{" or last "}" before truncation
-    try {
-      // Find the last position of a fully closed object (ends with "}")
-      // then close the array after it
-      const lastClose = cleaned.lastIndexOf('}');
-      if (lastClose !== -1) {
-        const salvaged = cleaned.slice(0, lastClose + 1) + ']';
-        // Make sure it starts with [
-        const fixed = salvaged.startsWith('[') ? salvaged : '[' + salvaged;
-        return JSON.parse(fixed);
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // keep incomplete last line for next chunk
+ 
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const payload = line.slice(6).trim();
+      if (payload === '[DONE]') { done = true; break; }
+ 
+      let evt;
+      try { evt = JSON.parse(payload); } catch { continue; }
+ 
+      if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+        raw += evt.delta.text;
+        const n = (raw.match(/\{/g) || []).length;
+        if (n > count) {
+          count = n;
+          setProgress(
+            `Receiving results… (${count} item${count!==1?'s':''})`,
+            'Streaming live — results appear when complete'
+          );
+        }
       }
-    } catch (e2) {
-      // ignore
+      if (evt.type === 'error') throw new Error(evt.error?.message || 'Stream error');
     }
- 
-    // Attempt 3: extract individual objects with a regex sweep
-    try {
-      const objects = [];
-      // Match top-level objects greedily
-      const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
-      let match;
-      while ((match = objRegex.exec(cleaned)) !== null) {
-        try {
-          const obj = JSON.parse(match[0]);
-          if (obj.name) objects.push(obj); // must have at least a name field
-        } catch { /* skip malformed */ }
-      }
-      if (objects.length > 0) return objects;
-    } catch (e3) {
-      // ignore
-    }
- 
-    throw new Error(`SyntaxError parsing menu response. The menu may be too large — try uploading a cropped section or pasting the text manually.`);
   }
+ 
+  // ── Parse accumulated JSON ──────────────────────────
+  let cleaned = raw.trim()
+    .replace(/^```json\s*/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+ 
+  try { return JSON.parse(cleaned); } catch {}
+ 
+  try {
+    const last  = cleaned.lastIndexOf('}');
+    if (last !== -1) {
+      const fixed = (cleaned.startsWith('[') ? '' : '[') + cleaned.slice(0, last+1) + ']';
+      return JSON.parse(fixed);
+    }
+  } catch {}
+ 
+  try {
+    const objs = [];
+    const re = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+    let m;
+    while ((m = re.exec(cleaned)) !== null) {
+      try { const o = JSON.parse(m[0]); if (o.name) objs.push(o); } catch {}
+    }
+    if (objs.length) return objs;
+  } catch {}
+ 
+  throw new Error('Could not parse menu response. Try a clearer image or paste the text manually.');
 }
  
 // ═══════════════════════════════════════════════════════
@@ -946,7 +937,7 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
   }
  
   try {
-    setProgress('Estimating nutrition values...', 'Using ingredient knowledge to calculate calories & protein');
+    setProgress('Estimating nutrition values...', 'Calculating tokens based on menu size...');
  
     const parsed = await callClaude(rawText, attachedFile, customReq);
  
@@ -988,4 +979,3 @@ function reapply() {
 </script>
 </body>
 </html>
- 
