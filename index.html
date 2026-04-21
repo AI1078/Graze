@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Graze — Menu Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+:root {
+  --cream:      #f5f1ec;
+  --cream-dark: #e8e2d9;
+  --paper:      #ffffff;
+  --charcoal:   #1a1a1a;
+  --mid:        #57524e;
+  --soft:       #9b9490;
+  --border:     #ddd8d2;
+  --terra:      #b85c38;
+  --terra-dim:  #d4845f;
+  --terra-bg:   #fdf0eb;
+  --green:      #356b50;
+  --green-bg:   #eaf4ef;
+  --warn-bg:    #fff6ed;
+  --warn:       #a06020;
+  --shadow-sm:  0 1px 4px rgba(0,0,0,0.07);
+  --shadow-md:  0 4px 20px rgba(0,0,0,0.09);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.13);
+  --r-sm: 6px; --r-md: 12px; --r-lg: 18px;
+  --ff-display: 'Cormorant Garamond', Georgia, serif;
+  --ff-body:    'Outfit', sans-serif;
+  --ease: 0.18s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ff-body);
+  background: var(--cream);
+  color: var(--charcoal);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page { max-width: 780px; margin: 0 auto; padding: 0 20px 80px; }
+
+/* HEADER */
+header { padding: 48px 0 32px; border-bottom: 1px solid var(--cream-dark); margin-bottom: 28px; }
+.eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--terra); margin-bottom: 8px; }
+header h1 { font-family: var(--ff-display); font-size: clamp(44px, 8vw, 66px); font-weight: 700; line-height: 1; letter-spacing: -0.5px; margin-bottom: 10px; }
+header p { font-size: 14px; color: var(--mid); font-weight: 300; max-width: 480px; }
+
+/* CARD */
+.card { background: var(--paper); border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+
+/* INPUT CARD */
+.input-card { display: flex; flex-direction: column; }
+
+/* TOOLBAR */
+.toolbar { display: flex; align-items: center; gap: 3px; padding: 9px 12px; border-bottom: 1px solid var(--cream-dark); }
+
+.toolbar-btn {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: var(--r-sm);
+  border: 1px solid transparent; background: transparent;
+  font-family: var(--ff-body); font-size: 12.5px; font-weight: 500;
+  color: var(--mid); cursor: pointer;
+  transition: background var(--ease), border-color var(--ease), color var(--ease);
+  white-space: nowrap; user-select: none; line-height: 1;
+}
+.toolbar-btn:hover, .toolbar-btn.open { background: var(--cream); border-color: var(--border); color: var(--charcoal); }
+.toolbar-btn.active-state { background: var(--terra-bg); border-color: #e9c4b4; color: var(--terra); }
+.toolbar-sep { width: 1px; height: 16px; background: var(--cream-dark); margin: 0 3px; flex-shrink: 0; }
+.chev { width: 8px; height: 5px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.f-badge { display: none; background: var(--terra); color: #fff; border-radius: 999px; font-size: 10px; font-weight: 600; padding: 1px 6px; line-height: 14px; }
+
+/* DROPDOWN */
+.dd-wrap { position: relative; }
+.dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: var(--paper); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-lg); z-index: 200; padding: 5px; animation: ddIn 0.13s ease; }
+.dropdown.open { display: block; }
+@keyframes ddIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+.attach-dd { min-width: 210px; }
+.filter-dd  { min-width: 230px; }
+
+.dd-file {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px; border-radius: var(--r-sm);
+  border: none; background: transparent; font-family: var(--ff-body);
+  font-size: 13px; color: var(--charcoal); cursor: pointer; text-align: left;
+  transition: background var(--ease); position: relative; overflow: hidden;
+}
+.dd-file:hover { background: var(--cream); }
+.dd-file input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+.dd-ico { width: 26px; height: 26px; border-radius: 6px; background: var(--cream); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--mid); }
+.dd-text { display: flex; flex-direction: column; }
+.dd-name { font-size: 13px; font-weight: 400; }
+.dd-hint { font-size: 11px; color: var(--soft); }
+.dd-divider { height: 1px; background: var(--cream-dark); margin: 4px 4px; }
+
+/* FILTER LIST */
+.filter-list { display: flex; flex-direction: column; gap: 1px; max-height: 300px; overflow-y: auto; }
+.f-row { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: var(--r-sm); cursor: pointer; font-size: 13px; color: var(--charcoal); transition: background var(--ease); user-select: none; }
+.f-row:hover { background: var(--cream); }
+.f-row.checked { color: var(--terra); font-weight: 500; }
+.f-row input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--terra); cursor: pointer; flex-shrink: 0; }
+
+/* TEXTAREA */
+#menuText {
+  width: 100%; min-height: 160px;
+  padding: 14px 16px; font-family: var(--ff-body); font-size: 14px;
+  color: var(--charcoal); background: transparent;
+  border: none; outline: none; resize: vertical; line-height: 1.75;
+}
+#menuText::placeholder { color: var(--soft); }
+
+/* CUSTOM REQUEST inside card */
+.custom-section { padding: 0 16px 14px; border-top: 1px solid var(--cream-dark); padding-top: 12px; }
+
+.field-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--soft); margin-bottom: 7px; }
+
+#customRequest {
+  width: 100%; padding: 10px 13px; font-family: var(--ff-body); font-size: 13.5px;
+  color: var(--charcoal); background: var(--cream); border: 1px solid var(--border);
+  border-radius: var(--r-md); outline: none;
+  transition: border-color var(--ease), background var(--ease);
+}
+#customRequest:focus { border-color: var(--terra-dim); background: #fff; }
+#customRequest::placeholder { color: var(--soft); }
+
+/* FILE BAR */
+.file-bar { display: none; align-items: center; gap: 8px; padding: 8px 16px; font-size: 12px; color: var(--mid); background: var(--cream); border-top: 1px solid var(--cream-dark); }
+.file-bar.show { display: flex; }
+.file-bar-name { font-weight: 500; color: var(--charcoal); }
+.file-bar-clear { margin-left: auto; background: none; border: none; font-size: 12px; color: var(--soft); cursor: pointer; padding: 2px 6px; border-radius: 4px; font-family: var(--ff-body); transition: color var(--ease); }
+.file-bar-clear:hover { color: var(--terra); }
+
+/* CHIP ROW */
+.chip-row { display: none; flex-wrap: wrap; gap: 6px; padding: 0 2px 12px; }
+.chip-row.show { display: flex; }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 11px; border-radius: 999px; background: var(--terra-bg); border: 1px solid #e9c4b4; font-size: 12px; font-weight: 500; color: var(--terra); }
+.chip-x { background: none; border: none; padding: 0; cursor: pointer; color: var(--terra-dim); font-size: 14px; line-height: 1; display: flex; align-items: center; transition: color var(--ease); }
+.chip-x:hover { color: var(--terra); }
+
+/* ACTION BAR */
+.action-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; padding: 16px 18px; }
+.select-group { flex: 1; min-width: 190px; }
+.select-group select {
+  width: 100%; padding: 10px 34px 10px 13px; font-family: var(--ff-body);
+  font-size: 13.5px; color: var(--charcoal); background: var(--cream);
+  border: 1px solid var(--border); border-radius: var(--r-md); outline: none;
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239b9490' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  transition: border-color var(--ease);
+}
+.select-group select:focus { border-color: var(--terra-dim); }
+
+.btn { padding: 10px 20px; border-radius: var(--r-md); font-family: var(--ff-body); font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; transition: all var(--ease); white-space: nowrap; }
+.btn-primary { background: var(--terra); color: #fff; box-shadow: 0 3px 10px rgba(184,92,56,0.26); }
+.btn-primary:hover { background: #a04830; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(184,92,56,0.34); }
+.btn-primary:active { transform: none; }
+.btn-primary:disabled { background: var(--soft); box-shadow: none; cursor: not-allowed; transform: none; }
+.btn-ghost { background: transparent; color: var(--mid); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--charcoal); color: var(--charcoal); }
+
+/* LOADING STATE */
+.analyzing-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--terra-bg);
+  border: 1px solid #e9c4b4;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  color: var(--terra);
+  margin-bottom: 14px;
+}
+.analyzing-bar.show { display: flex; }
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid #e9c4b4;
+  border-top-color: var(--terra);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-text { flex: 1; }
+.progress-step { font-size: 11px; color: var(--terra-dim); margin-top: 1px; }
+
+/* ERROR BAR */
+.error-bar {
+  display: none;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff2f2;
+  border: 1px solid #f5c6c6;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  color: #9b2626;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.error-bar.show { display: flex; }
+
+/* RESULTS */
+#results { display: none; margin-top: 6px; }
+.results-summary { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.results-count { font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--charcoal); }
+.results-count em { color: var(--terra); font-style: normal; }
+.results-of { font-size: 13px; color: var(--soft); }
+
+/* estimation notice */
+.estimate-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 10px 14px; background: var(--cream);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  font-size: 12px; color: var(--mid); margin-bottom: 14px; line-height: 1.5;
+}
+.estimate-note svg { flex-shrink: 0; margin-top: 1px; }
+
+.item-list { display: flex; flex-direction: column; gap: 10px; }
+
+.item-card {
+  background: var(--paper); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 6px 20px; align-items: start;
+  animation: fadeUp 0.2s ease both;
+  transition: box-shadow var(--ease), transform var(--ease);
+}
+.item-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.item-card:nth-child(1){animation-delay:.03s} .item-card:nth-child(2){animation-delay:.06s}
+.item-card:nth-child(3){animation-delay:.09s} .item-card:nth-child(4){animation-delay:.12s}
+.item-card:nth-child(5){animation-delay:.15s} .item-card:nth-child(6){animation-delay:.18s}
+.item-card:nth-child(7){animation-delay:.21s} .item-card:nth-child(8){animation-delay:.24s}
+.item-card:nth-child(9){animation-delay:.27s} .item-card:nth-child(10){animation-delay:.30s}
+
+.item-name { font-family: var(--ff-display); font-size: 18px; font-weight: 600; color: var(--charcoal); margin-bottom: 4px; }
+.item-ingredients { font-size: 12px; color: var(--soft); margin-bottom: 7px; line-height: 1.4; }
+
+.item-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 8px; }
+.meta-val { font-size: 13px; color: var(--mid); }
+.meta-val strong { color: var(--charcoal); font-weight: 600; }
+.meta-val.estimated { color: var(--soft); font-size: 12px; }
+.meta-val.estimated strong { color: var(--mid); }
+
+.item-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 999px; text-transform: capitalize; }
+.tag-green { background: var(--green-bg); color: var(--green); }
+.tag-terra { background: var(--terra-bg); color: var(--terra); }
+.tag-warn  { background: var(--warn-bg);  color: var(--warn); }
+.tag-gray  { background: var(--cream);    color: var(--mid); border: 1px solid var(--border); }
+
+.item-price-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.item-price { font-family: var(--ff-display); font-size: 21px; font-weight: 700; color: var(--terra); white-space: nowrap; }
+
+.item-note { font-size: 12px; color: var(--soft); font-style: italic; grid-column: 1 / -1; margin-top: 2px; line-height: 1.4; }
+
+@media (max-width: 460px) { .item-card { grid-template-columns: 1fr; } .item-price { text-align: left; } }
+
+.no-results { text-align: center; padding: 44px 20px; color: var(--soft); background: var(--paper); border: 1px solid var(--border); border-radius: var(--r-lg); font-size: 14px; line-height: 1.8; }
+
+footer { text-align: center; padding-top: 44px; font-size: 12px; color: var(--soft); letter-spacing: 0.3px; }
+</style>
+</head>
+
+<body>
+<div class="page">
+
+  <header>
+    <div class="eyebrow">Menu Analysis</div>
+    <h1>Graze</h1>
+    <p>Upload a photo or PDF of any menu. Graze reads it, identifies every dish, and estimates nutrition from ingredients — no calorie labels needed.</p>
+  </header>
+
+  <!-- UNIFIED INPUT CARD -->
+  <div class="card input-card">
+
+    <div class="toolbar">
+
+      <!-- Attach dropdown -->
+      <div class="dd-wrap">
+        <button class="toolbar-btn" id="attachBtn" onclick="toggleDD('attachDD','attachBtn')">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
+          Attach
+          <svg class="chev" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3"/></svg>
+        </button>
+        <div class="dropdown attach-dd" id="attachDD">
+          <label class="dd-file">
+            <div class="dd-ico">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="11" height="11" rx="2"/><circle cx="4.5" cy="4.5" r="1"/><path d="M1 9.5l3-3 2 2 2-2.5 3 3"/></svg>
+            </div>
+            <div class="dd-text"><span class="dd-name">Image</span><span class="dd-hint">JPG, PNG, JPEG</span></div>
+            <input type="file" accept="image/*" id="imgInput"/>
+          </label>
+          <label class="dd-file">
+            <div class="dd-ico">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1h7l3 3v9H2z"/><path d="M9 1v3h3"/><line x1="4" y1="7" x2="9" y2="7"/><line x1="4" y1="9.5" x2="7" y2="9.5"/></svg>
+            </div>
+            <div class="dd-text"><span class="dd-name">PDF</span><span class="dd-hint">PDF menus</span></div>
+            <input type="file" accept="application/pdf" id="pdfInput"/>
+          </label>
+          <div class="dd-divider"></div>
+          <label class="dd-file">
+            <div class="dd-ico">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3.5" width="11" height="8" rx="1.5"/><circle cx="6.5" cy="7.5" r="2"/><path d="M4.5 3.5l.8-2h2.4l.8 2"/></svg>
+            </div>
+            <div class="dd-text"><span class="dd-name">Take Photo</span><span class="dd-hint">Device camera</span></div>
+            <input type="file" accept="image/*" capture="environment" id="cameraInput"/>
+          </label>
+        </div>
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Filters dropdown -->
+      <div class="dd-wrap">
+        <button class="toolbar-btn" id="filterBtn" onclick="toggleDD('filterDD','filterBtn')">
+          <svg width="12" height="11" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="2.5" x2="11" y2="2.5"/><line x1="3" y1="5.5" x2="9" y2="5.5"/><line x1="5" y1="8.5" x2="7" y2="8.5"/></svg>
+          Filters
+          <span class="f-badge" id="fBadge"></span>
+          <svg class="chev" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3"/></svg>
+        </button>
+        <div class="dropdown filter-dd" id="filterDD">
+          <div class="filter-list" id="filterList"></div>
+        </div>
+      </div>
+
+    </div><!-- /toolbar -->
+
+    <!-- Textarea -->
+    <textarea id="menuText"
+      placeholder="Paste menu text here if you don't have a file — or leave blank and attach an image or PDF above.&#10;&#10;Graze will read the actual menu and estimate calories, protein, and more for every dish."></textarea>
+
+    <!-- Custom Request -->
+    <div class="custom-section">
+      <span class="field-label">Custom Request</span>
+      <input type="text" id="customRequest"
+        placeholder="e.g.  high protein under 500 calories and no pork  —  or  under $15"/>
+    </div>
+
+    <!-- File attached bar -->
+    <div class="file-bar" id="fileBar">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1h6l3 3v8H2z"/><path d="M8 1v3h3"/></svg>
+      <span id="fileName"></span>
+      <button class="file-bar-clear" id="clearFile">Remove</button>
+    </div>
+
+  </div><!-- /input-card -->
+
+  <!-- ACTIVE FILTER CHIPS -->
+  <div class="chip-row" id="chipRow"></div>
+
+  <!-- SORT + ACTIONS -->
+  <div class="card">
+    <div class="action-bar">
+      <div class="select-group">
+        <span class="field-label">Sort By</span>
+        <select id="sortBy">
+          <option value="default">Default Order</option>
+          <option value="protein_desc">Protein — Highest First</option>
+          <option value="protein_asc">Protein — Lowest First</option>
+          <option value="cal_asc">Calories — Lowest First</option>
+          <option value="cal_desc">Calories — Highest First</option>
+          <option value="price_asc">Price — Lowest First</option>
+          <option value="price_desc">Price — Highest First</option>
+          <option value="name_az">Name — A to Z</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="analyzeBtn">Analyze Menu</button>
+      <button class="btn btn-ghost"   id="clearBtn">Clear All</button>
+    </div>
+  </div>
+
+  <!-- ANALYZING STATE -->
+  <div class="analyzing-bar" id="analyzingBar">
+    <div class="spinner"></div>
+    <div>
+      <div class="progress-text" id="progressText">Reading your menu...</div>
+      <div class="progress-step" id="progressStep">This may take 10–20 seconds for large menus</div>
+    </div>
+  </div>
+
+  <!-- ERROR BAR -->
+  <div class="error-bar" id="errorBar">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" flex-shrink="0" style="flex-shrink:0;margin-top:2px"><circle cx="8" cy="8" r="7"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+    <span id="errorMsg"></span>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="results-summary">
+      <div class="results-count" id="resultsCount"></div>
+      <div class="results-of"    id="resultsOf"></div>
+    </div>
+    <div class="estimate-note" id="estimateNote" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r="0.5" fill="currentColor"/></svg>
+      Nutritional values marked <strong>est.</strong> are AI estimates based on typical ingredients and standard portion sizes. They are approximations, not lab-tested values.
+    </div>
+    <div class="item-list" id="itemList"></div>
+  </div>
+
+  <footer>Graze &mdash; Powered by Claude AI. Nutrition estimates are approximate.</footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  FILTER DEFINITIONS
+// ═══════════════════════════════════════════════════════
+const FILTER_DEFS = [
+  { id:'halal',           label:'Halal' },
+  { id:'kosher',          label:'Kosher' },
+  { id:'vegan',           label:'Vegan' },
+  { id:'vegetarian',      label:'Vegetarian' },
+  { id:'gluten free',     label:'Gluten Free' },
+  { id:'dairy free',      label:'Dairy Free' },
+  { id:'no pork',         label:'No Pork' },
+  { id:'no shellfish',    label:'No Shellfish' },
+  { id:'nut free',        label:'Nut Free' },
+  { id:'budget friendly', label:'Budget Friendly (under $12)' },
+];
+
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let activeFilters = new Set();
+let attachedFile  = null;   // { base64, mediaType, name }
+let allItems      = [];     // last full parsed result
+
+// ═══════════════════════════════════════════════════════
+//  BUILD FILTER CHECKLIST
+// ═══════════════════════════════════════════════════════
+const filterListEl = document.getElementById('filterList');
+FILTER_DEFS.forEach(f => {
+  const row = document.createElement('label');
+  row.className = 'f-row';
+  row.dataset.id = f.id;
+  row.innerHTML = `<input type="checkbox" value="${f.id}"> ${f.label}`;
+  row.querySelector('input').addEventListener('change', e => {
+    e.target.checked ? activeFilters.add(f.id) : activeFilters.delete(f.id);
+    row.classList.toggle('checked', e.target.checked);
+    syncFilterUI();
+  });
+  filterListEl.appendChild(row);
+});
+
+function syncFilterUI() {
+  const n       = activeFilters.size;
+  const badge   = document.getElementById('fBadge');
+  const btn     = document.getElementById('filterBtn');
+  const chipRow = document.getElementById('chipRow');
+
+  badge.textContent = n;
+  badge.style.display = n ? 'inline' : 'none';
+  btn.classList.toggle('active-state', n > 0);
+
+  chipRow.innerHTML = '';
+  if (n > 0) {
+    chipRow.classList.add('show');
+    activeFilters.forEach(fid => {
+      const def  = FILTER_DEFS.find(f => f.id === fid);
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.innerHTML = `${def.label} <button class="chip-x" title="Remove">&#x2715;</button>`;
+      chip.querySelector('button').onclick = () => removeFilter(fid);
+      chipRow.appendChild(chip);
+    });
+  } else {
+    chipRow.classList.remove('show');
+  }
+}
+
+function removeFilter(fid) {
+  activeFilters.delete(fid);
+  filterListEl.querySelectorAll('input').forEach(cb => {
+    if (cb.value === fid) { cb.checked = false; cb.closest('label').classList.remove('checked'); }
+  });
+  syncFilterUI();
+}
+
+// ═══════════════════════════════════════════════════════
+//  DROPDOWN
+// ═══════════════════════════════════════════════════════
+function toggleDD(ddId, btnId) {
+  const dd = document.getElementById(ddId);
+  const btn = document.getElementById(btnId);
+  const isOpen = dd.classList.contains('open');
+  closeAllDDs();
+  if (!isOpen) { dd.classList.add('open'); btn.classList.add('open'); }
+}
+
+function closeAllDDs() {
+  document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.toolbar-btn').forEach(b => b.classList.remove('open'));
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dd-wrap')) closeAllDDs();
+});
+
+// ═══════════════════════════════════════════════════════
+//  FILE INPUT — read as base64, store in state
+// ═══════════════════════════════════════════════════════
+function handleFileInput(file) {
+  if (!file) return;
+
+  const isImage = file.type.startsWith('image/');
+  const isPDF   = file.type === 'application/pdf';
+
+  if (!isImage && !isPDF) {
+    showError('Please upload an image (PNG, JPG, screenshot, etc.) or a PDF file.');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl   = e.target.result;
+    const base64    = dataUrl.split(',')[1];
+    const mediaType = file.type;
+
+    attachedFile = { base64, mediaType, name: file.name, isImage, isPDF };
+
+    document.getElementById('fileName').innerHTML =
+      `<strong>${file.name}</strong> attached — Graze will analyze the actual menu`;
+    document.getElementById('fileBar').classList.add('show');
+    closeAllDDs();
+  };
+  reader.readAsDataURL(file);
+}
+
+['imgInput','pdfInput','cameraInput'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function () {
+    if (this.files?.length) handleFileInput(this.files[0]);
+  });
+});
+
+document.getElementById('clearFile').addEventListener('click', () => {
+  attachedFile = null;
+  document.getElementById('fileBar').classList.remove('show');
+  ['imgInput','pdfInput','cameraInput'].forEach(id => { document.getElementById(id).value = ''; });
+});
+
+// ═══════════════════════════════════════════════════════
+//  CLEAR ALL
+// ═══════════════════════════════════════════════════════
+document.getElementById('clearBtn').addEventListener('click', () => {
+  activeFilters.clear();
+  filterListEl.querySelectorAll('input').forEach(cb => {
+    cb.checked = false; cb.closest('label').classList.remove('checked');
+  });
+  syncFilterUI();
+  document.getElementById('customRequest').value = '';
+  document.getElementById('sortBy').value = 'default';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('menuText').value = '';
+  document.getElementById('clearFile').click();
+  hideError();
+  allItems = [];
+});
+
+// ═══════════════════════════════════════════════════════
+//  ERROR / PROGRESS UI
+// ═══════════════════════════════════════════════════════
+function showError(msg) {
+  const bar = document.getElementById('errorBar');
+  document.getElementById('errorMsg').textContent = msg;
+  bar.classList.add('show');
+}
+
+function hideError() { document.getElementById('errorBar').classList.remove('show'); }
+
+function setProgress(text, step) {
+  document.getElementById('progressText').textContent = text;
+  document.getElementById('progressStep').textContent = step || '';
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANTHROPIC API CALL
+//  Sends the menu (image, PDF, or text) to Claude and gets
+//  back a JSON array of parsed + nutrition-estimated items.
+// ═══════════════════════════════════════════════════════
+async function callClaude(menuText, file, customRequest) {
+  const systemPrompt = `You are a menu analysis expert and nutrition estimator.
+
+Your job:
+1. Extract EVERY food and drink item from the menu provided (image, PDF, or text).
+2. For each item, estimate nutritional values using your knowledge of typical ingredients, cooking methods, and standard restaurant portion sizes. Do NOT skip items just because calorie info isn't on the menu — estimate it.
+3. Identify dietary tags from ingredients and context.
+4. Return ONLY a valid JSON array. No markdown, no explanation, no backticks.
+
+For each item return this exact object shape:
+{
+  "name": "Item name as written on menu",
+  "description": "Brief ingredient/description if available, else empty string",
+  "calories": number or null,
+  "calories_estimated": true or false,
+  "protein": number (grams) or null,
+  "protein_estimated": true or false,
+  "carbs": number (grams) or null,
+  "fat": number (grams) or null,
+  "price": number or null,
+  "tags": [],
+  "note": "optional short note about estimation assumptions"
+}
+
+Tags must come from this exact list only (use as many as apply):
+halal, kosher, vegan, vegetarian, gluten free, dairy free, no pork, contains pork, contains shellfish, contains dairy, contains nuts, nut free, budget friendly, spicy, high protein
+
+Budget friendly = price exists and is $12 or under.
+High protein = estimated protein >= 30g.
+
+Estimation rules:
+- Use standard restaurant portion sizes (e.g. 6oz chicken breast, 8oz steak, 1 cup pasta).
+- Grilled chicken breast ~165 cal, ~31g protein per 6oz.
+- Beef steak ~250-350 cal, ~26-35g protein per 6oz depending on cut.
+- Salmon fillet ~350 cal, ~34g protein per 6oz.
+- Rice (1 cup cooked) ~200 cal, ~4g protein.
+- Pasta (1 cup) ~220 cal, ~8g protein.
+- Vegetables ~25-80 cal per serving.
+- Add sauces, oils, cheese, bread as appropriate.
+- Always set calories_estimated: true if not explicitly stated on the menu.
+- Always set protein_estimated: true if not explicitly stated on the menu.
+
+If the custom request is provided, note it but still return ALL items — filtering happens client-side.
+
+Return ONLY the JSON array. Start with [ and end with ].`;
+
+  const userContent = [];
+
+  // Attach the file if provided
+  if (file) {
+    if (file.isImage) {
+      userContent.push({
+        type: 'image',
+        source: { type: 'base64', media_type: file.mediaType, data: file.base64 }
+      });
+      userContent.push({ type: 'text', text: `This is a photo of a restaurant menu. Extract and analyze every food and drink item on it.${customRequest ? ' Custom request context: ' + customRequest : ''}` });
+    } else if (file.isPDF) {
+      userContent.push({
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: file.base64 }
+      });
+      userContent.push({ type: 'text', text: `This is a PDF of a restaurant menu. Extract and analyze every food and drink item on it.${customRequest ? ' Custom request context: ' + customRequest : ''}` });
+    }
+  } else {
+    // Plain text menu
+    userContent.push({
+      type: 'text',
+      text: `Here is the menu text:\n\n${menuText}\n\n${customRequest ? 'Custom request context: ' + customRequest : ''}\n\nExtract and analyze every food and drink item.`
+    });
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userContent }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  const raw  = data.content?.find(b => b.type === 'text')?.text || '[]';
+
+  // Clean markdown fences if present
+  let cleaned = raw.trim()
+    .replace(/^```json\s*/i, '')
+    .replace(/^```/, '')
+    .replace(/```$/, '')
+    .trim();
+
+  // Attempt 1: straight parse
+  try {
+    return JSON.parse(cleaned);
+  } catch (e1) {
+    // Attempt 2: response was truncated mid-JSON — salvage complete objects
+    // Find the last complete object by locating the last "},\n{" or last "}" before truncation
+    try {
+      // Find the last position of a fully closed object (ends with "}")
+      // then close the array after it
+      const lastClose = cleaned.lastIndexOf('}');
+      if (lastClose !== -1) {
+        const salvaged = cleaned.slice(0, lastClose + 1) + ']';
+        // Make sure it starts with [
+        const fixed = salvaged.startsWith('[') ? salvaged : '[' + salvaged;
+        return JSON.parse(fixed);
+      }
+    } catch (e2) {
+      // ignore
+    }
+
+    // Attempt 3: extract individual objects with a regex sweep
+    try {
+      const objects = [];
+      // Match top-level objects greedily
+      const objRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
+      let match;
+      while ((match = objRegex.exec(cleaned)) !== null) {
+        try {
+          const obj = JSON.parse(match[0]);
+          if (obj.name) objects.push(obj); // must have at least a name field
+        } catch { /* skip malformed */ }
+      }
+      if (objects.length > 0) return objects;
+    } catch (e3) {
+      // ignore
+    }
+
+    throw new Error(`SyntaxError parsing menu response. The menu may be too large — try uploading a cropped section or pasting the text manually.`);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CLIENT-SIDE FILTER
+// ═══════════════════════════════════════════════════════
+function applyFilters(items, custom) {
+  const c = custom.toLowerCase();
+  let maxCal=null, minProt=null, maxPrice=null, cTags=[];
+
+  const cC = c.match(/under\s+(\d+)\s*cal|less than\s+(\d+)\s*cal/);
+  if (cC) maxCal = +(cC[1]||cC[2]);
+  const pC = c.match(/under\s+\$?(\d+(?:\.\d+)?)|less than\s+\$?(\d+(?:\.\d+)?)/);
+  if (pC) maxPrice = +(pC[1]||pC[2]);
+  if (c.includes('high protein')) minProt = 30;
+
+  ['halal','kosher','vegan','vegetarian','gluten free','dairy free','no pork','no shellfish','nut free']
+    .forEach(t => { if (c.includes(t)) cTags.push(t); });
+
+  const pass = (item, f) => {
+    if (f==='halal'          && !item.tags.includes('halal'))             return false;
+    if (f==='kosher'         && !item.tags.includes('kosher'))            return false;
+    if (f==='vegan'          && !item.tags.includes('vegan'))             return false;
+    if (f==='vegetarian'     && !item.tags.includes('vegetarian') && !item.tags.includes('vegan')) return false;
+    if (f==='gluten free'    && !item.tags.includes('gluten free'))       return false;
+    if (f==='dairy free'     && item.tags.includes('contains dairy'))     return false;
+    if (f==='no pork'        && item.tags.includes('contains pork'))      return false;
+    if (f==='no shellfish'   && item.tags.includes('contains shellfish')) return false;
+    if (f==='nut free'       && item.tags.includes('contains nuts'))      return false;
+    if (f==='budget friendly'&& !item.tags.includes('budget friendly'))   return false;
+    return true;
+  };
+
+  return items.filter(item => {
+    for (const f of activeFilters) if (!pass(item, f)) return false;
+    if (maxCal   && item.calories!==null && item.calories > maxCal)   return false;
+    if (maxPrice && item.price!==null    && item.price    > maxPrice) return false;
+    if (minProt  && (item.protein===null || item.protein < minProt))  return false;
+    for (const t of cTags) if (!pass(item, t)) return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  CLIENT-SIDE SORT
+// ═══════════════════════════════════════════════════════
+function applySort(items, key, custom) {
+  const c = custom.toLowerCase();
+  let sk  = key;
+  if (sk==='default') {
+    if (c.includes('high protein')||c.includes('most protein'))     sk='protein_desc';
+    else if (c.includes('low calorie')||c.includes('fewest cal'))   sk='cal_asc';
+    else if (c.includes('cheapest')||c.includes('lowest price'))    sk='price_asc';
+  }
+  const nl = (a,b,k) => {
+    if (a[k]===null&&b[k]===null) return 0;
+    if (a[k]===null) return 1; if (b[k]===null) return -1; return 0;
+  };
+  const s = [...items];
+  switch(sk){
+    case 'protein_desc': return s.sort((a,b)=>nl(a,b,'protein') ||b.protein-a.protein);
+    case 'protein_asc':  return s.sort((a,b)=>nl(a,b,'protein') ||a.protein-b.protein);
+    case 'cal_asc':      return s.sort((a,b)=>nl(a,b,'calories')||a.calories-b.calories);
+    case 'cal_desc':     return s.sort((a,b)=>nl(a,b,'calories')||b.calories-a.calories);
+    case 'price_asc':    return s.sort((a,b)=>nl(a,b,'price')   ||a.price-b.price);
+    case 'price_desc':   return s.sort((a,b)=>nl(a,b,'price')   ||b.price-a.price);
+    case 'name_az':      return s.sort((a,b)=>a.name.localeCompare(b.name));
+    default:             return s;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TAG STYLE
+// ═══════════════════════════════════════════════════════
+function tagClass(t) {
+  if (['halal','kosher','vegan','vegetarian','gluten free','dairy free','no pork','nut free','high protein'].includes(t)) return 'tag-green';
+  if (['budget friendly'].includes(t)) return 'tag-terra';
+  if (['contains dairy','contains pork','contains shellfish','contains nuts','spicy'].includes(t)) return 'tag-warn';
+  return 'tag-gray';
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER RESULTS
+// ═══════════════════════════════════════════════════════
+function render(items, total, hasEstimates) {
+  const resEl   = document.getElementById('results');
+  const countEl = document.getElementById('resultsCount');
+  const ofEl    = document.getElementById('resultsOf');
+  const listEl  = document.getElementById('itemList');
+  const noteEl  = document.getElementById('estimateNote');
+
+  resEl.style.display  = 'block';
+  listEl.innerHTML     = '';
+  countEl.innerHTML    = `<em>${items.length}</em> item${items.length!==1?'s':''} found`;
+  ofEl.textContent     = `of ${total} on this menu`;
+  noteEl.style.display = hasEstimates ? 'flex' : 'none';
+
+  if (!items.length) {
+    listEl.innerHTML = `<div class="no-results">No items match your current filters.<br>Try adjusting or removing some criteria.</div>`;
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.style.animationDelay = `${i * 0.035}s`;
+
+    const calStr  = item.calories!==null
+      ? `<span class="meta-val${item.calories_estimated?' estimated':''}"><strong>${item.calories}</strong> cal${item.calories_estimated?' <abbr title="AI estimate" style="text-decoration:none;font-size:10px;color:var(--soft)">(est.)</abbr>':''}</span>` : '';
+    const protStr = item.protein!==null
+      ? `<span class="meta-val${item.protein_estimated?' estimated':''}"><strong>${item.protein}g</strong> protein${item.protein_estimated?' <abbr title="AI estimate" style="text-decoration:none;font-size:10px;color:var(--soft)">(est.)</abbr>':''}</span>` : '';
+    const carbStr = item.carbs!==null ? `<span class="meta-val"><strong>${item.carbs}g</strong> carbs</span>` : '';
+    const fatStr  = item.fat!==null   ? `<span class="meta-val"><strong>${item.fat}g</strong> fat</span>`   : '';
+
+    const metaHtml = [calStr, protStr, carbStr, fatStr].filter(Boolean).join('');
+    const tagsHtml = (item.tags||[]).map(t => `<span class="tag ${tagClass(t)}">${t}</span>`).join('');
+
+    const priceHtml = item.price!==null
+      ? `<div class="item-price">$${Number(item.price).toFixed(2)}</div>`
+      : `<div class="item-price" style="color:var(--soft);font-size:14px;font-family:var(--ff-body)">—</div>`;
+
+    card.innerHTML = `
+      <div>
+        <div class="item-name">${item.name}</div>
+        ${item.description ? `<div class="item-ingredients">${item.description}</div>` : ''}
+        ${metaHtml ? `<div class="item-meta">${metaHtml}</div>` : ''}
+        ${tagsHtml ? `<div class="item-tags">${tagsHtml}</div>` : ''}
+        ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
+      </div>
+      <div class="item-price-col">${priceHtml}</div>`;
+
+    listEl.appendChild(card);
+  });
+
+  resEl.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ═══════════════════════════════════════════════════════
+//  ANALYZE BUTTON
+// ═══════════════════════════════════════════════════════
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  hideError();
+
+  const rawText    = document.getElementById('menuText').value.trim();
+  const customReq  = document.getElementById('customRequest').value.trim();
+  const sortKey    = document.getElementById('sortBy').value;
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const analyzeBar = document.getElementById('analyzingBar');
+
+  // Need something to analyze
+  if (!attachedFile && !rawText) {
+    showError('Please attach a menu image or PDF, or paste menu text below.');
+    return;
+  }
+
+  // Start loading UI
+  analyzeBtn.disabled = true;
+  analyzeBar.classList.add('show');
+  document.getElementById('results').style.display = 'none';
+
+  if (attachedFile?.isImage) {
+    setProgress('Reading menu image...', 'Claude is identifying every dish');
+  } else if (attachedFile?.isPDF) {
+    setProgress('Parsing menu PDF...', 'Extracting all items from the document');
+  } else {
+    setProgress('Analyzing menu text...', 'Identifying dishes and estimating nutrition');
+  }
+
+  try {
+    setProgress('Estimating nutrition values...', 'Using ingredient knowledge to calculate calories & protein');
+
+    const parsed = await callClaude(rawText, attachedFile, customReq);
+
+    allItems = parsed;
+
+    setProgress('Applying your filters...', '');
+
+    const filtered     = applyFilters(allItems, customReq);
+    const sorted       = applySort(filtered, sortKey, customReq);
+    const hasEstimates = allItems.some(i => i.calories_estimated || i.protein_estimated);
+
+    render(sorted, allItems.length, hasEstimates);
+
+  } catch (err) {
+    console.error(err);
+    showError(`Analysis failed: ${err.message}. Check your connection and try again.`);
+  } finally {
+    analyzeBtn.disabled = false;
+    analyzeBar.classList.remove('show');
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  RE-FILTER / RE-SORT without re-calling API
+//  If results are already loaded and user changes sort/filters,
+//  re-apply client-side instantly.
+// ═══════════════════════════════════════════════════════
+document.getElementById('sortBy').addEventListener('change', reapply);
+
+function reapply() {
+  if (!allItems.length) return;
+  const customReq    = document.getElementById('customRequest').value.trim();
+  const sortKey      = document.getElementById('sortBy').value;
+  const filtered     = applyFilters(allItems, customReq);
+  const sorted       = applySort(filtered, sortKey, customReq);
+  const hasEstimates = allItems.some(i => i.calories_estimated || i.protein_estimated);
+  render(sorted, allItems.length, hasEstimates);
+}
+</script>
+</body>
+</html>
