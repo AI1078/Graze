@@ -3,303 +3,1054 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Graze — Menu Analysis</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<title>Graze — Know What You Eat</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
  
 <style>
+/* ═══════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════ */
 :root {
-  --cream:      #f5f1ec;
-  --cream-dark: #e8e2d9;
-  --paper:      #ffffff;
-  --charcoal:   #1a1a1a;
-  --mid:        #57524e;
-  --soft:       #9b9490;
-  --border:     #ddd8d2;
-  --terra:      #b85c38;
-  --terra-dim:  #d4845f;
-  --terra-bg:   #fdf0eb;
-  --green:      #356b50;
-  --green-bg:   #eaf4ef;
-  --warn-bg:    #fff6ed;
-  --warn:       #a06020;
-  --shadow-sm:  0 1px 4px rgba(0,0,0,0.07);
-  --shadow-md:  0 4px 20px rgba(0,0,0,0.09);
-  --shadow-lg:  0 12px 40px rgba(0,0,0,0.13);
-  --r-sm: 6px; --r-md: 12px; --r-lg: 18px;
+  --forest:      #1b3a2d;
+  --forest-deep: #122619;
+  --forest-mid:  #2a5440;
+  --sage:        #4a7c5f;
+  --sage-light:  #6fa880;
+  --sage-pale:   #c8dfd2;
+  --mint:        #e8f4ed;
+  --mint-dark:   #d1e8da;
+  --paper:       #fafdf9;
+  --white:       #ffffff;
+  --charcoal:    #1a1a1a;
+  --mid:         #4a5545;
+  --soft:        #8a9e8f;
+  --border:      #cdddd5;
+  --border-dark: #b8cfc1;
+  --gold:        #c8a96e;
+  --gold-light:  #e8d4a8;
+  --warn:        #8b4513;
+  --warn-bg:     #fdf0e8;
+  --shadow-sm:   0 1px 3px rgba(27,58,45,0.08);
+  --shadow-md:   0 4px 16px rgba(27,58,45,0.12);
+  --shadow-lg:   0 12px 40px rgba(27,58,45,0.18);
+  --shadow-xl:   0 24px 64px rgba(27,58,45,0.22);
+  --r-sm:  6px;
+  --r-md:  14px;
+  --r-lg:  22px;
+  --r-xl:  32px;
   --ff-display: 'Cormorant Garamond', Georgia, serif;
-  --ff-body:    'Outfit', sans-serif;
-  --ease: 0.18s ease;
+  --ff-body:    'DM Sans', sans-serif;
+  --ease:       0.2s ease;
 }
  
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
  
+html { scroll-behavior: smooth; }
+ 
 body {
   font-family: var(--ff-body);
-  background: var(--cream);
+  background: var(--paper);
   color: var(--charcoal);
   min-height: 100vh;
   font-size: 15px;
   line-height: 1.6;
+  overflow-x: hidden;
 }
  
-.page { max-width: 780px; margin: 0 auto; padding: 0 20px 80px; }
+/* ═══════════════════════════════════════
+   HERO
+═══════════════════════════════════════ */
+.hero {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 52px 24px 40px;
+  overflow: hidden;
+  transition:
+    min-height 0.75s cubic-bezier(0.4, 0, 0.2, 1),
+    padding    0.75s cubic-bezier(0.4, 0, 0.2, 1);
+}
  
-/* HEADER */
-header { padding: 48px 0 32px; border-bottom: 1px solid var(--cream-dark); margin-bottom: 28px; }
-.eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--terra); margin-bottom: 8px; }
-header h1 { font-family: var(--ff-display); font-size: clamp(44px, 8vw, 66px); font-weight: 700; line-height: 1; letter-spacing: -0.5px; margin-bottom: 10px; }
-header p { font-size: 14px; color: var(--mid); font-weight: 300; max-width: 480px; }
+/* Unsplash food photo background */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1920&q=80');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
  
-/* CARD */
-.card { background: var(--paper); border-radius: var(--r-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 14px; }
+/* deep forest green overlay with subtle vignette */
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(18,38,25,0.72) 0%, rgba(18,38,25,0.88) 100%);
+}
  
-/* INPUT CARD */
-.input-card { display: flex; flex-direction: column; }
+/* floating food mosaic — three accent images */
+.hero-mosaic {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
  
-/* TOOLBAR */
-.toolbar { display: flex; align-items: center; gap: 3px; padding: 9px 12px; border-bottom: 1px solid var(--cream-dark); }
+.mosaic-img {
+  position: absolute;
+  border-radius: var(--r-md);
+  object-fit: cover;
+  opacity: 0.5;
+  filter: saturate(1.3) brightness(0.85);
+  background: var(--forest-mid);
+}
+ 
+.mosaic-img.left {
+  width: 200px; height: 260px;
+  top: 8%; left: -20px;
+  transform: rotate(-5deg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+ 
+.mosaic-img.right {
+  width: 180px; height: 240px;
+  bottom: 8%; right: -10px;
+  transform: rotate(4deg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+ 
+.mosaic-img.top-right {
+  width: 150px; height: 190px;
+  top: 5%; right: 14%;
+  transform: rotate(2deg);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+ 
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+}
+ 
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(200,169,110,0.4);
+  background: rgba(200,169,110,0.12);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  margin-bottom: 22px;
+}
+ 
+.hero-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+ 
+.hero h1 {
+  font-family: var(--ff-display);
+  font-size: clamp(58px, 10vw, 88px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -1px;
+  color: var(--white);
+  margin-bottom: 20px;
+}
+ 
+.hero h1 em {
+  font-style: italic;
+  color: var(--sage-light);
+}
+ 
+.hero-title {
+  font-family: var(--ff-display);
+  font-size: clamp(72px, 14vw, 120px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -2px;
+  color: var(--white);
+  margin-bottom: 16px;
+}
+ 
+.hero-title em {
+  font-style: italic;
+  color: var(--sage-light);
+}
+ 
+.hero-sub {
+  font-size: clamp(28px, 5vw, 42px);
+  color: rgba(255,255,255,0.88);
+  font-family: var(--ff-display);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  margin: 0 auto;
+}
+ 
+.hero-sub-em {
+  color: var(--sage-light);
+  font-style: italic;
+}
+ 
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+ 
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+ 
+.stat-num {
+  font-family: var(--ff-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
+}
+ 
+.stat-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+ 
+/* scroll indicator removed */
+ 
+/* ─── Collapsing hero ─── */
+/* Hero sticks to top so when collapsed it acts as a persistent header */
+ 
+/* Expanded default */
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 640px;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+ 
+.hero-mosaic {
+  transition: opacity 0.45s ease;
+}
+ 
+/* Compact bar — hidden initially, fades in after collapse */
+.hero-compact {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease 0.35s;
+}
+ 
+.hero-compact-title {
+  font-family: var(--ff-display);
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+ 
+.hero-compact-title em {
+  font-style: italic;
+  color: var(--sage-light);
+}
+ 
+/* Collapsed state */
+.hero.is-collapsed {
+  min-height: 64px;
+  padding: 0 24px;
+}
+ 
+.hero.is-collapsed .hero-content {
+  opacity: 0;
+  transform: scale(0.94) translateY(-12px);
+  pointer-events: none;
+}
+ 
+.hero.is-collapsed .hero-mosaic {
+  opacity: 0;
+}
+ 
+.hero.is-collapsed .hero-compact {
+  opacity: 1;
+  pointer-events: auto;
+}
+ 
+/* ═══════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════ */
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+ 
+/* section label */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--sage);
+  margin-bottom: 12px;
+  display: block;
+}
+ 
+/* ═══════════════════════════════════════
+   UNIFIED INPUT PANEL
+═══════════════════════════════════════ */
+.input-panel {
+  margin-top: 0;
+  position: relative;
+  z-index: 10;
+  background: var(--white);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xl);
+  overflow: visible;
+  margin-bottom: 20px;
+  clip-path: none;
+}
+ 
+/* ── Toolbar row ── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--forest);
+  border-bottom: none;
+  flex-wrap: wrap;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
  
 .toolbar-btn {
-  position: relative;
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: var(--r-sm);
-  border: 1px solid transparent; background: transparent;
-  font-family: var(--ff-body); font-size: 12.5px; font-weight: 500;
-  color: var(--mid); cursor: pointer;
-  transition: background var(--ease), border-color var(--ease), color var(--ease);
-  white-space: nowrap; user-select: none; line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.09);
+  font-family: var(--ff-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.82);
+  cursor: pointer;
+  transition: all var(--ease);
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
 }
-.toolbar-btn:hover, .toolbar-btn.open { background: var(--cream); border-color: var(--border); color: var(--charcoal); }
-.toolbar-btn.active-state { background: var(--terra-bg); border-color: #e9c4b4; color: var(--terra); }
-.toolbar-sep { width: 1px; height: 16px; background: var(--cream-dark); margin: 0 3px; flex-shrink: 0; }
-.chev { width: 8px; height: 5px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
-.f-badge { display: none; background: var(--terra); color: #fff; border-radius: 999px; font-size: 10px; font-weight: 600; padding: 1px 6px; line-height: 14px; }
  
-/* DROPDOWN */
+.toolbar-btn:hover,
+.toolbar-btn.open {
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  border-color: rgba(255,255,255,0.15);
+}
+ 
+.toolbar-btn.active-state {
+  background: rgba(111,168,128,0.28);
+  border-color: rgba(111,168,128,0.5);
+  color: #a8e0bc;
+}
+ 
+.toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: rgba(255,255,255,0.15);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+ 
+.toolbar-spacer { flex: 1; }
+ 
+.btn-clear {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255,255,255,0.35);
+  background: transparent;
+  color: rgba(255,255,255,0.9);
+  font-family: var(--ff-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--ease);
+  white-space: nowrap;
+}
+ 
+.btn-clear:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.6);
+  color: #fff;
+}
+ 
+.chev {
+  width: 8px; height: 5px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round;
+}
+ 
+.f-badge {
+  display: none;
+  background: var(--sage-light);
+  color: var(--forest-deep);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  line-height: 14px;
+}
+ 
+/* ── Dropdown ── */
 .dd-wrap { position: relative; }
-.dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; background: var(--paper); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: var(--shadow-lg); z-index: 200; padding: 5px; animation: ddIn 0.13s ease; }
+ 
+.dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 300;
+  padding: 6px;
+  animation: ddIn 0.14s ease;
+  min-width: 210px;
+}
+ 
 .dropdown.open { display: block; }
-@keyframes ddIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
-.attach-dd { min-width: 210px; }
-.filter-dd  { min-width: 230px; }
+ 
+@keyframes ddIn {
+  from { opacity:0; transform:translateY(-6px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+ 
+.filter-dd { min-width: 230px; }
  
 .dd-file {
   display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 8px 10px; border-radius: var(--r-sm);
-  border: none; background: transparent; font-family: var(--ff-body);
-  font-size: 13px; color: var(--charcoal); cursor: pointer; text-align: left;
-  transition: background var(--ease); position: relative; overflow: hidden;
+  width: 100%; padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: none; background: transparent;
+  font-family: var(--ff-body); font-size: 13px;
+  color: var(--charcoal); cursor: pointer; text-align: left;
+  transition: background var(--ease);
+  position: relative; overflow: hidden;
 }
-.dd-file:hover { background: var(--cream); }
-.dd-file input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
-.dd-ico { width: 26px; height: 26px; border-radius: 6px; background: var(--cream); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--mid); }
+ 
+.dd-file:hover { background: var(--mint); }
+.dd-file input[type="file"] { position: absolute; inset:0; opacity:0; cursor:pointer; font-size:0; }
+ 
+.dd-ico {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--mint); display: flex;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; color: var(--forest-mid);
+}
+ 
 .dd-text { display: flex; flex-direction: column; }
-.dd-name { font-size: 13px; font-weight: 400; }
+.dd-name { font-size: 13px; font-weight: 500; color: var(--charcoal); }
 .dd-hint { font-size: 11px; color: var(--soft); }
-.dd-divider { height: 1px; background: var(--cream-dark); margin: 4px 4px; }
+.dd-divider { height: 1px; background: var(--border); margin: 4px 4px; }
  
-/* FILTER LIST */
-.filter-list { display: flex; flex-direction: column; gap: 1px; max-height: 300px; overflow-y: auto; }
-.f-row { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: var(--r-sm); cursor: pointer; font-size: 13px; color: var(--charcoal); transition: background var(--ease); user-select: none; }
-.f-row:hover { background: var(--cream); }
-.f-row.checked { color: var(--terra); font-weight: 500; }
-.f-row input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--terra); cursor: pointer; flex-shrink: 0; }
- 
-/* TEXTAREA */
-#menuText {
-  width: 100%; min-height: 160px;
-  padding: 14px 16px; font-family: var(--ff-body); font-size: 14px;
-  color: var(--charcoal); background: transparent;
-  border: none; outline: none; resize: vertical; line-height: 1.75;
+/* sort select in toolbar as a styled dropdown */
+.toolbar-select {
+  padding: 6px 28px 6px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.82);
+  font-family: var(--ff-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(255,255,255,0.5)' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: all var(--ease);
 }
+ 
+.toolbar-select:hover,
+.toolbar-select:focus {
+  background-color: rgba(255,255,255,0.16);
+  color: #fff;
+  border-color: rgba(255,255,255,0.25);
+}
+ 
+.toolbar-select option {
+  background: var(--forest-deep);
+  color: #fff;
+}
+ 
+/* filter list */
+.filter-list { display: flex; flex-direction: column; gap: 1px; max-height: 300px; overflow-y: auto; }
+ 
+.f-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: var(--r-sm);
+  cursor: pointer; font-size: 13px; color: var(--charcoal);
+  transition: background var(--ease); user-select: none;
+}
+ 
+.f-row:hover { background: var(--mint); }
+.f-row.checked { color: var(--forest-mid); font-weight: 500; }
+.f-row input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--forest-mid); cursor: pointer; flex-shrink: 0; }
+ 
+/* ── Analyze row — floats overlapping the bottom edge of the panel ── */
+.analyze-row {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px;
+  margin-bottom: -22px; /* pulls button to overlap outside the card */
+  position: relative;
+  z-index: 20;
+}
+ 
+.btn-analyze {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 36px;
+  border-radius: 999px;
+  border: none;
+  background: var(--forest);
+  color: #fff;
+  font-family: var(--ff-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ease);
+  box-shadow: 0 6px 20px rgba(27,58,45,0.35);
+  letter-spacing: 0.2px;
+}
+ 
+.btn-analyze:hover {
+  background: var(--forest-mid);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(27,58,45,0.42);
+}
+ 
+.btn-analyze:active  { transform: none; }
+.btn-analyze:disabled {
+  opacity: 0.5; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
+ 
+/* ── Textarea area ── */
+.textarea-wrap {
+  position: relative;
+  border-radius: 0 0 var(--r-xl) var(--r-xl);
+  overflow: hidden;
+  padding-bottom: 22px; /* room for the overlapping button */
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--r-xl) var(--r-xl);
+}
+ 
+#menuText {
+  width: 100%;
+  min-height: 180px;
+  padding: 18px 20px 16px;
+  font-family: var(--ff-body);
+  font-size: 14.5px;
+  color: var(--charcoal);
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: vertical;
+  line-height: 1.8;
+}
+ 
 #menuText::placeholder { color: var(--soft); }
  
-/* CUSTOM REQUEST inside card */
-.custom-section { padding: 0 16px 14px; border-top: 1px solid var(--cream-dark); padding-top: 12px; }
- 
-.field-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--soft); margin-bottom: 7px; }
- 
-#customRequest {
-  width: 100%; padding: 10px 13px; font-family: var(--ff-body); font-size: 13.5px;
-  color: var(--charcoal); background: var(--cream); border: 1px solid var(--border);
-  border-radius: var(--r-md); outline: none;
-  transition: border-color var(--ease), background var(--ease);
+/* ── File attached state ── */
+.file-bar {
+  display: none;
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--forest);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
 }
-#customRequest:focus { border-color: var(--terra-dim); background: #fff; }
-#customRequest::placeholder { color: var(--soft); }
  
-/* FILE BAR */
-.file-bar { display: none; align-items: center; gap: 8px; padding: 8px 16px; font-size: 12px; color: var(--mid); background: var(--cream); border-top: 1px solid var(--cream-dark); }
-.file-bar.show { display: flex; }
-.file-bar-name { font-weight: 500; color: var(--charcoal); }
-.file-bar-clear { margin-left: auto; background: none; border: none; font-size: 12px; color: var(--soft); cursor: pointer; padding: 2px 6px; border-radius: 4px; font-family: var(--ff-body); transition: color var(--ease); }
-.file-bar-clear:hover { color: var(--terra); }
+.file-bar.show {
+  display: flex;
+  animation: slideUp 0.2s ease;
+}
  
-/* CHIP ROW */
-.chip-row { display: none; flex-wrap: wrap; gap: 6px; padding: 0 2px 12px; }
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+ 
+.file-bar-name {
+  font-weight: 600;
+  color: var(--sage-light);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+ 
+.file-size-badge {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(111,168,128,0.25);
+  color: var(--sage-light);
+  font-size: 10px;
+  font-weight: 600;
+}
+ 
+.file-bar-clear {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--ff-body);
+  transition: color var(--ease);
+}
+ 
+.file-bar-clear:hover { color: #ff9f9f; }
+ 
+/* panel glow when file is attached */
+.input-panel.has-file {
+  box-shadow: var(--shadow-xl), 0 0 0 2px rgba(111,168,128,0.35);
+}
+ 
+/* ═══════════════════════════════════════
+   CHIP ROW
+═══════════════════════════════════════ */
+.chip-row { display: none; flex-wrap: wrap; gap: 6px; margin: 36px 0 10px; }
 .chip-row.show { display: flex; }
-.chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 11px; border-radius: 999px; background: var(--terra-bg); border: 1px solid #e9c4b4; font-size: 12px; font-weight: 500; color: var(--terra); }
-.chip-x { background: none; border: none; padding: 0; cursor: pointer; color: var(--terra-dim); font-size: 14px; line-height: 1; display: flex; align-items: center; transition: color var(--ease); }
-.chip-x:hover { color: var(--terra); }
  
-/* ACTION BAR */
-.action-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; padding: 16px 18px; }
-.select-group { flex: 1; min-width: 190px; }
-.select-group select {
-  width: 100%; padding: 10px 34px 10px 13px; font-family: var(--ff-body);
-  font-size: 13.5px; color: var(--charcoal); background: var(--cream);
-  border: 1px solid var(--border); border-radius: var(--r-md); outline: none;
-  appearance: none; cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239b9490' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: right 12px center;
-  transition: border-color var(--ease);
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px 4px 12px;
+  border-radius: 999px;
+  background: var(--mint); border: 1px solid var(--sage-pale);
+  font-size: 12px; font-weight: 500; color: var(--forest-mid);
 }
-.select-group select:focus { border-color: var(--terra-dim); }
  
-.btn { padding: 10px 20px; border-radius: var(--r-md); font-family: var(--ff-body); font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; transition: all var(--ease); white-space: nowrap; }
-.btn-primary { background: var(--terra); color: #fff; box-shadow: 0 3px 10px rgba(184,92,56,0.26); }
-.btn-primary:hover { background: #a04830; transform: translateY(-1px); box-shadow: 0 5px 14px rgba(184,92,56,0.34); }
-.btn-primary:active { transform: none; }
-.btn-primary:disabled { background: var(--soft); box-shadow: none; cursor: not-allowed; transform: none; }
-.btn-ghost { background: transparent; color: var(--mid); border: 1px solid var(--border); }
-.btn-ghost:hover { border-color: var(--charcoal); color: var(--charcoal); }
+.chip-x {
+  background: none; border: none; padding: 0;
+  cursor: pointer; color: var(--sage);
+  font-size: 14px; line-height: 1;
+  display: flex; align-items: center;
+  transition: color var(--ease);
+}
  
-/* LOADING STATE */
+.chip-x:hover { color: var(--forest); }
+ 
+/* ═══════════════════════════════════════
+   ANALYZING / ERROR BARS
+═══════════════════════════════════════ */
 .analyzing-bar {
   display: none;
-  align-items: center;
-  gap: 12px;
+  align-items: center; gap: 14px;
   padding: 14px 18px;
-  background: var(--terra-bg);
-  border: 1px solid #e9c4b4;
+  background: var(--forest);
   border-radius: var(--r-md);
-  font-size: 13px;
-  color: var(--terra);
-  margin-bottom: 14px;
+  font-size: 13px; color: rgba(255,255,255,0.85);
+  margin-top: 36px;
+  margin-bottom: 16px;
 }
+ 
 .analyzing-bar.show { display: flex; }
  
 .spinner {
-  width: 16px; height: 16px;
-  border: 2px solid #e9c4b4;
-  border-top-color: var(--terra);
+  width: 18px; height: 18px;
+  border: 2px solid rgba(111,168,128,0.3);
+  border-top-color: var(--sage-light);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
   flex-shrink: 0;
 }
+ 
 @keyframes spin { to { transform: rotate(360deg); } }
  
-.progress-text { flex: 1; }
-.progress-step { font-size: 11px; color: var(--terra-dim); margin-top: 1px; }
+.progress-text { font-weight: 500; color: #fff; }
+.progress-step { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
  
-/* ERROR BAR */
 .error-bar {
   display: none;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #fff2f2;
-  border: 1px solid #f5c6c6;
+  align-items: flex-start; gap: 10px;
+  padding: 13px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
   border-radius: var(--r-md);
-  font-size: 13px;
-  color: #9b2626;
-  margin-bottom: 14px;
-  line-height: 1.5;
+  font-size: 13px; color: #991b1b;
+  margin-top: 36px;
+  margin-bottom: 16px; line-height: 1.5;
 }
+ 
 .error-bar.show { display: flex; }
  
-/* RESULTS */
-#results { display: none; margin-top: 6px; }
-.results-summary { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.results-count { font-family: var(--ff-display); font-size: 24px; font-weight: 600; color: var(--charcoal); }
-.results-count em { color: var(--terra); font-style: normal; }
-.results-of { font-size: 13px; color: var(--soft); }
+/* ═══════════════════════════════════════
+   RESULTS
+═══════════════════════════════════════ */
+#results { display: none; margin-top: 36px; }
  
-/* estimation notice */
+.results-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+ 
+.results-count {
+  font-family: var(--ff-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--charcoal);
+}
+ 
+.results-count em { color: var(--forest-mid); font-style: normal; }
+.results-of { font-size: 13px; color: var(--soft); margin-top: 2px; }
+ 
 .estimate-note {
   display: flex; align-items: flex-start; gap: 9px;
-  padding: 10px 14px; background: var(--cream);
-  border: 1px solid var(--border); border-radius: var(--r-md);
-  font-size: 12px; color: var(--mid); margin-bottom: 14px; line-height: 1.5;
+  padding: 10px 14px;
+  background: var(--mint);
+  border: 1px solid var(--sage-pale);
+  border-radius: var(--r-md);
+  font-size: 12px; color: var(--forest-mid);
+  margin-bottom: 16px; line-height: 1.6;
 }
-.estimate-note svg { flex-shrink: 0; margin-top: 1px; }
  
 .item-list { display: flex; flex-direction: column; gap: 10px; }
  
 .item-card {
-  background: var(--paper); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 16px 20px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 22px;
   box-shadow: var(--shadow-sm);
-  display: grid; grid-template-columns: 1fr auto;
-  gap: 6px 20px; align-items: start;
-  animation: fadeUp 0.2s ease both;
-  transition: box-shadow var(--ease), transform var(--ease);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 20px;
+  align-items: start;
+  animation: fadeUp 0.22s ease both;
+  transition: box-shadow var(--ease), transform var(--ease), border-color var(--ease);
 }
-.item-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
  
-@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-.item-card:nth-child(1){animation-delay:.03s} .item-card:nth-child(2){animation-delay:.06s}
-.item-card:nth-child(3){animation-delay:.09s} .item-card:nth-child(4){animation-delay:.12s}
-.item-card:nth-child(5){animation-delay:.15s} .item-card:nth-child(6){animation-delay:.18s}
-.item-card:nth-child(7){animation-delay:.21s} .item-card:nth-child(8){animation-delay:.24s}
-.item-card:nth-child(9){animation-delay:.27s} .item-card:nth-child(10){animation-delay:.30s}
+.item-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  border-color: var(--sage-pale);
+}
  
-.item-name { font-family: var(--ff-display); font-size: 18px; font-weight: 600; color: var(--charcoal); margin-bottom: 4px; }
-.item-ingredients { font-size: 12px; color: var(--soft); margin-bottom: 7px; line-height: 1.4; }
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
  
-.item-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-bottom: 8px; }
+.item-card:nth-child(1){animation-delay:.03s}
+.item-card:nth-child(2){animation-delay:.06s}
+.item-card:nth-child(3){animation-delay:.09s}
+.item-card:nth-child(4){animation-delay:.12s}
+.item-card:nth-child(5){animation-delay:.15s}
+.item-card:nth-child(6){animation-delay:.18s}
+.item-card:nth-child(7){animation-delay:.21s}
+.item-card:nth-child(8){animation-delay:.24s}
+.item-card:nth-child(9){animation-delay:.27s}
+.item-card:nth-child(10){animation-delay:.30s}
+ 
+/* left border accent on hover */
+.item-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 16px; bottom: 16px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--sage-light);
+  opacity: 0;
+  transition: opacity var(--ease);
+}
+ 
+.item-card { position: relative; }
+.item-card:hover::before { opacity: 1; }
+ 
+.item-name {
+  font-family: var(--ff-display);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+ 
+.item-ingredients {
+  font-size: 12px;
+  color: var(--soft);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+ 
+.item-meta {
+  display: flex; flex-wrap: wrap;
+  gap: 4px 18px; margin-bottom: 8px;
+}
+ 
 .meta-val { font-size: 13px; color: var(--mid); }
 .meta-val strong { color: var(--charcoal); font-weight: 600; }
-.meta-val.estimated { color: var(--soft); font-size: 12px; }
-.meta-val.estimated strong { color: var(--mid); }
+.meta-est { font-size: 10px; color: var(--soft); margin-left: 2px; }
  
 .item-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-.tag { font-size: 11px; font-weight: 500; padding: 2px 9px; border-radius: 999px; text-transform: capitalize; }
-.tag-green { background: var(--green-bg); color: var(--green); }
-.tag-terra { background: var(--terra-bg); color: var(--terra); }
-.tag-warn  { background: var(--warn-bg);  color: var(--warn); }
-.tag-gray  { background: var(--cream);    color: var(--mid); border: 1px solid var(--border); }
  
-.item-price-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-.item-price { font-family: var(--ff-display); font-size: 21px; font-weight: 700; color: var(--terra); white-space: nowrap; }
+.tag {
+  font-size: 11px; font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
  
-.item-note { font-size: 12px; color: var(--soft); font-style: italic; grid-column: 1 / -1; margin-top: 2px; line-height: 1.4; }
+.tag-green { background: var(--mint);    color: var(--forest-mid); border: 1px solid var(--sage-pale); }
+.tag-gold  { background: #fef9ec;        color: #8b6914; border: 1px solid #f0d78a; }
+.tag-warn  { background: var(--warn-bg); color: var(--warn); border: 1px solid #f4c4a0; }
+.tag-gray  { background: #f4f4f4;        color: var(--soft); border: 1px solid #e0e0e0; }
  
-@media (max-width: 460px) { .item-card { grid-template-columns: 1fr; } .item-price { text-align: left; } }
+.item-price {
+  font-family: var(--ff-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--forest-mid);
+  text-align: right;
+  white-space: nowrap;
+}
  
-.no-results { text-align: center; padding: 44px 20px; color: var(--soft); background: var(--paper); border: 1px solid var(--border); border-radius: var(--r-lg); font-size: 14px; line-height: 1.8; }
+.item-note {
+  font-size: 12px; color: var(--soft);
+  font-style: italic;
+  grid-column: 1 / -1;
+  margin-top: 4px; line-height: 1.5;
+}
  
-footer { text-align: center; padding-top: 44px; font-size: 12px; color: var(--soft); letter-spacing: 0.3px; }
+@media (max-width: 480px) {
+  .item-card { grid-template-columns: 1fr; }
+  .item-price { text-align: left; }
+}
+ 
+.no-results {
+  text-align: center;
+  padding: 48px 20px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  color: var(--soft);
+  font-size: 14px;
+  line-height: 1.8;
+}
+ 
+/* ═══════════════════════════════════════
+   HOW IT WORKS STRIP — compact horizontal
+═══════════════════════════════════════ */
+.how-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 24px 0 24px;
+  background: var(--forest);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+ 
+.how-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  position: relative;
+}
+ 
+.how-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 20%; bottom: 20%;
+  width: 1px;
+  background: rgba(255,255,255,0.1);
+}
+ 
+.how-num {
+  font-family: var(--ff-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--sage-light);
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+ 
+.how-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+ 
+.how-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.42);
+  line-height: 1.4;
+}
+ 
+@media (max-width: 600px) {
+  .how-strip { flex-direction: column; }
+  .how-item:not(:last-child)::after { top: auto; bottom: 0; left: 16px; right: 16px; width: auto; height: 1px; }
+  .how-item { padding: 12px 16px; }
+}
+ 
+@media (max-width: 560px) {
+  .how-strip { grid-template-columns: 1fr; }
+  .toolbar { gap: 6px; }
+  .toolbar-spacer { display: none; }
+}
+ 
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+footer {
+  margin-top: 48px;
+  padding: 24px 0 12px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--soft);
+  letter-spacing: 0.3px;
+}
 </style>
 </head>
  
 <body>
+ 
+<!-- ═══════════════════════
+     HERO
+═══════════════════════ -->
+<div class="hero">
+  <div class="hero-bg"></div>
+ 
+  <!-- accent food images -->
+  <div class="hero-mosaic">
+    <img class="mosaic-img left"
+      src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=70"
+      alt=""/>
+    <img class="mosaic-img right"
+      src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=400&q=70"
+      alt=""/>
+    <img class="mosaic-img top-right"
+      src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=360&q=70"
+      alt=""/>
+  </div>
+ 
+  <div class="hero-content">
+    <div class="hero-eyebrow">AI Powered Menu Analysis</div>
+    <h1 class="hero-title">Gr<em>a</em>ze</h1>
+    <p class="hero-sub">Know what<br>you <span class="hero-sub-em">eat</span></p>
+  </div>
+ 
+  <div class="hero-compact">
+    <span class="hero-compact-title">Gr<em>a</em>ze</span>
+  </div>
+</div>
+ 
+<!-- ═══════════════════════
+     MAIN
+═══════════════════════ -->
 <div class="page">
  
-  <header>
-    <div class="eyebrow">Menu Analysis</div>
-    <h1>Graze</h1>
-    <p>Upload a photo or PDF of any menu. Graze reads it, identifies every dish, and estimates nutrition from ingredients — no calorie labels needed.</p>
-  </header>
+  <!-- How it works — compact strip above the input -->
+  <div class="how-strip">
+    <div class="how-item">
+      <div class="how-num">01</div>
+      <div class="how-text">
+        <div class="how-title">Upload or Paste</div>
+        <div class="how-desc">Photo, PDF, or typed menu text</div>
+      </div>
+    </div>
+    <div class="how-item">
+      <div class="how-num">02</div>
+      <div class="how-text">
+        <div class="how-title">AI Reads Everything</div>
+        <div class="how-desc">Every dish identified, nutrition estimated</div>
+      </div>
+    </div>
+    <div class="how-item">
+      <div class="how-num">03</div>
+      <div class="how-text">
+        <div class="how-title">Filter and Sort</div>
+        <div class="how-desc">Halal, vegan, calories, protein and more</div>
+      </div>
+    </div>
+  </div>
  
-  <!-- UNIFIED INPUT CARD -->
-  <div class="card input-card">
+  <!-- ── UNIFIED INPUT PANEL ── -->
+  <div class="input-panel" id="inputPanel">
  
+    <!-- Toolbar row -->
     <div class="toolbar">
  
-      <!-- Attach dropdown -->
+      <!-- Attach -->
       <div class="dd-wrap">
         <button class="toolbar-btn" id="attachBtn" onclick="toggleDD('attachDD','attachBtn')">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>
           Attach
           <svg class="chev" viewBox="0 0 8 5"><path d="M1 1l3 3 3-3"/></svg>
         </button>
-        <div class="dropdown attach-dd" id="attachDD">
+        <div class="dropdown" id="attachDD">
           <label class="dd-file">
             <div class="dd-ico">
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="1" width="11" height="11" rx="2"/><circle cx="4.5" cy="4.5" r="1"/><path d="M1 9.5l3-3 2 2 2-2.5 3 3"/></svg>
             </div>
-            <div class="dd-text"><span class="dd-name">Image</span><span class="dd-hint">JPG, PNG, JPEG</span></div>
+            <div class="dd-text"><span class="dd-name">Image</span><span class="dd-hint">JPG, PNG, screenshot</span></div>
             <input type="file" accept="image/*" id="imgInput"/>
           </label>
           <label class="dd-file">
@@ -322,7 +1073,7 @@ footer { text-align: center; padding-top: 44px; font-size: 12px; color: var(--so
  
       <div class="toolbar-sep"></div>
  
-      <!-- Filters dropdown -->
+      <!-- Filters -->
       <div class="dd-wrap">
         <button class="toolbar-btn" id="filterBtn" onclick="toggleDD('filterDD','filterBtn')">
           <svg width="12" height="11" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1" y1="2.5" x2="11" y2="2.5"/><line x1="3" y1="5.5" x2="9" y2="5.5"/><line x1="5" y1="8.5" x2="7" y2="8.5"/></svg>
@@ -335,115 +1086,115 @@ footer { text-align: center; padding-top: 44px; font-size: 12px; color: var(--so
         </div>
       </div>
  
+      <div class="toolbar-sep"></div>
+ 
+      <!-- Sort By -->
+      <select class="toolbar-select" id="sortBy">
+        <option value="default">Sort by...</option>
+        <option value="protein_desc">Protein: High to Low</option>
+        <option value="protein_asc">Protein: Low to High</option>
+        <option value="cal_asc">Calories: Low to High</option>
+        <option value="cal_desc">Calories: High to Low</option>
+        <option value="price_asc">Price: Low to High</option>
+        <option value="price_desc">Price: High to Low</option>
+        <option value="name_az">Name: A to Z</option>
+      </select>
+ 
+      <div class="toolbar-spacer"></div>
+ 
+      <!-- Clear only in toolbar -->
+      <button class="btn-clear" id="clearBtn">Clear</button>
+ 
     </div><!-- /toolbar -->
  
-    <!-- Textarea -->
-    <textarea id="menuText"
-      placeholder="Paste menu text here if you don't have a file — or leave blank and attach an image or PDF above.&#10;&#10;Graze will read the actual menu and estimate calories, protein, and more for every dish."></textarea>
+    <!-- Single textarea -->
+    <div class="textarea-wrap">
+      <textarea id="menuText"
+        placeholder="Paste menu text here, or attach a photo above and leave this empty. You can also describe what you are looking for, like: high protein under 600 calories and no pork."></textarea>
  
-    <!-- Custom Request -->
-    <div class="custom-section">
-      <span class="field-label">Custom Request</span>
-      <input type="text" id="customRequest"
-        placeholder="e.g.  high protein under 500 calories and no pork  —  or  under $15"/>
+      <!-- File attached indicator -->
+      <div class="file-bar" id="fileBar">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1h6l3 3v8H2z"/><path d="M8 1v3h3"/></svg>
+        <span id="fileName"></span>
+        <span class="file-size-badge" id="fileSizeBadge"></span>
+        <span style="color:rgba(255,255,255,0.45);font-size:11px">Ready to analyze</span>
+        <button class="file-bar-clear" id="clearFile">Remove</button>
+      </div>
+ 
+      <!-- Analyze button centered at bottom -->
+      <div class="analyze-row">
+        <button class="btn-analyze" id="analyzeBtn">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="6"/><polyline points="5,7 7,9 9,5.5"/></svg>
+          Analyze Menu
+        </button>
+      </div>
     </div>
  
-    <!-- File attached bar -->
-    <div class="file-bar" id="fileBar">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 1h6l3 3v8H2z"/><path d="M8 1v3h3"/></svg>
-      <span id="fileName"></span>
-      <button class="file-bar-clear" id="clearFile">Remove</button>
-    </div>
+  </div><!-- /input-panel -->
  
-  </div><!-- /input-card -->
- 
-  <!-- ACTIVE FILTER CHIPS -->
+  <!-- Active filter chips -->
   <div class="chip-row" id="chipRow"></div>
  
-  <!-- SORT + ACTIONS -->
-  <div class="card">
-    <div class="action-bar">
-      <div class="select-group">
-        <span class="field-label">Sort By</span>
-        <select id="sortBy">
-          <option value="default">Default Order</option>
-          <option value="protein_desc">Protein — Highest First</option>
-          <option value="protein_asc">Protein — Lowest First</option>
-          <option value="cal_asc">Calories — Lowest First</option>
-          <option value="cal_desc">Calories — Highest First</option>
-          <option value="price_asc">Price — Lowest First</option>
-          <option value="price_desc">Price — Highest First</option>
-          <option value="name_az">Name — A to Z</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" id="analyzeBtn">Analyze Menu</button>
-      <button class="btn btn-ghost"   id="clearBtn">Clear All</button>
-    </div>
-  </div>
- 
-  <!-- ANALYZING STATE -->
+  <!-- Analyzing bar -->
   <div class="analyzing-bar" id="analyzingBar">
     <div class="spinner"></div>
     <div>
       <div class="progress-text" id="progressText">Reading your menu...</div>
-      <div class="progress-step" id="progressStep">This may take 10–20 seconds for large menus</div>
+      <div class="progress-step" id="progressStep">This may take a few seconds</div>
     </div>
   </div>
  
-  <!-- ERROR BAR -->
+  <!-- Error bar -->
   <div class="error-bar" id="errorBar">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" flex-shrink="0" style="flex-shrink:0;margin-top:2px"><circle cx="8" cy="8" r="7"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="8" cy="8" r="7"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.6" fill="currentColor"/></svg>
     <span id="errorMsg"></span>
   </div>
  
-  <!-- RESULTS -->
+  <!-- Results -->
   <div id="results">
-    <div class="results-summary">
-      <div class="results-count" id="resultsCount"></div>
-      <div class="results-of"    id="resultsOf"></div>
+    <div class="results-header">
+      <div>
+        <div class="results-count" id="resultsCount"></div>
+        <div class="results-of" id="resultsOf"></div>
+      </div>
     </div>
     <div class="estimate-note" id="estimateNote" style="display:none">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r="0.5" fill="currentColor"/></svg>
-      Nutritional values marked <strong>est.</strong> are AI estimates based on typical ingredients and standard portion sizes. They are approximations, not lab-tested values.
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="7" cy="7" r="6"/><line x1="7" y1="6" x2="7" y2="10"/><circle cx="7" cy="4.5" r="0.5" fill="currentColor"/></svg>
+      Values marked <strong>est.</strong> are AI estimates based on typical ingredients and standard portion sizes, not lab measured figures.
     </div>
     <div class="item-list" id="itemList"></div>
   </div>
  
-  <footer>Graze &mdash; Powered by Claude AI. Nutrition estimates are approximate.</footer>
-</div>
+  <footer>Graze &mdash; Powered by Claude AI &nbsp;·&nbsp; Nutrition figures are estimates only</footer>
+ 
+</div><!-- /page -->
  
 <script>
 // ═══════════════════════════════════════════════════════
-//  FILTER DEFINITIONS
+//  FILTERS
 // ═══════════════════════════════════════════════════════
 const FILTER_DEFS = [
+  { id:'budget friendly', label:'Budget Friendly (under $12)' },
+  { id:'dairy free',      label:'Dairy Free' },
+  { id:'gluten free',     label:'Gluten Free' },
   { id:'halal',           label:'Halal' },
   { id:'kosher',          label:'Kosher' },
-  { id:'vegan',           label:'Vegan' },
-  { id:'vegetarian',      label:'Vegetarian' },
-  { id:'gluten free',     label:'Gluten Free' },
-  { id:'dairy free',      label:'Dairy Free' },
   { id:'no pork',         label:'No Pork' },
   { id:'no shellfish',    label:'No Shellfish' },
   { id:'nut free',        label:'Nut Free' },
-  { id:'budget friendly', label:'Budget Friendly (under $12)' },
+  { id:'vegan',           label:'Vegan' },
+  { id:'vegetarian',      label:'Vegetarian' },
 ];
  
-// ═══════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════
 let activeFilters = new Set();
-let attachedFile  = null;   // { base64, mediaType, name }
-let allItems      = [];     // last full parsed result
+let attachedFile  = null;
+let allItems      = [];
  
-// ═══════════════════════════════════════════════════════
-//  BUILD FILTER CHECKLIST
-// ═══════════════════════════════════════════════════════
+// build filter list
 const filterListEl = document.getElementById('filterList');
 FILTER_DEFS.forEach(f => {
   const row = document.createElement('label');
   row.className = 'f-row';
-  row.dataset.id = f.id;
   row.innerHTML = `<input type="checkbox" value="${f.id}"> ${f.label}`;
   row.querySelector('input').addEventListener('change', e => {
     e.target.checked ? activeFilters.add(f.id) : activeFilters.delete(f.id);
@@ -454,9 +1205,9 @@ FILTER_DEFS.forEach(f => {
 });
  
 function syncFilterUI() {
-  const n       = activeFilters.size;
-  const badge   = document.getElementById('fBadge');
-  const btn     = document.getElementById('filterBtn');
+  const n = activeFilters.size;
+  const badge = document.getElementById('fBadge');
+  const btn   = document.getElementById('filterBtn');
   const chipRow = document.getElementById('chipRow');
  
   badge.textContent = n;
@@ -470,7 +1221,7 @@ function syncFilterUI() {
       const def  = FILTER_DEFS.find(f => f.id === fid);
       const chip = document.createElement('div');
       chip.className = 'chip';
-      chip.innerHTML = `${def.label} <button class="chip-x" title="Remove">&#x2715;</button>`;
+      chip.innerHTML = `${def.label} <button class="chip-x">&#x2715;</button>`;
       chip.querySelector('button').onclick = () => removeFilter(fid);
       chipRow.appendChild(chip);
     });
@@ -488,10 +1239,10 @@ function removeFilter(fid) {
 }
  
 // ═══════════════════════════════════════════════════════
-//  DROPDOWN
+//  DROPDOWNS
 // ═══════════════════════════════════════════════════════
 function toggleDD(ddId, btnId) {
-  const dd = document.getElementById(ddId);
+  const dd  = document.getElementById(ddId);
   const btn = document.getElementById(btnId);
   const isOpen = dd.classList.contains('open');
   closeAllDDs();
@@ -508,84 +1259,67 @@ document.addEventListener('click', e => {
 });
  
 // ═══════════════════════════════════════════════════════
-//  FILE INPUT — read as base64, store in state
+//  IMAGE COMPRESSION
 // ═══════════════════════════════════════════════════════
-// ─── image compression via canvas ───────────────────────
-// Anthropic's limit is 5MB on the base64 string itself (not the binary).
-// Base64 is 33% larger than binary, so a 4MB binary = 5.3MB base64 → rejected.
-// We target MAX_BASE64_CHARS so the string always arrives safely under the cap.
-const MAX_BASE64_CHARS = 3.8 * 1024 * 1024;  // ~3.8 MB base64 = ~2.85 MB binary
+const MAX_BASE64_CHARS = 3.8 * 1024 * 1024;
 const MAX_DIMENSION    = 1920;
-const JPEG_QUALITY     = 0.85;
  
 function compressImage(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
- 
-      // Scale down if needed
       if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-        if (width >= height) { height = Math.round(height * MAX_DIMENSION / width);  width = MAX_DIMENSION; }
-        else                 { width  = Math.round(width  * MAX_DIMENSION / height); height = MAX_DIMENSION; }
+        if (width >= height) { height = Math.round(height * MAX_DIMENSION / width); width = MAX_DIMENSION; }
+        else { width = Math.round(width * MAX_DIMENSION / height); height = MAX_DIMENSION; }
       }
- 
       const canvas = document.createElement('canvas');
-      canvas.width  = width;
-      canvas.height = height;
+      canvas.width = width; canvas.height = height;
       canvas.getContext('2d').drawImage(img, 0, 0, width, height);
- 
-      // Drop quality until base64 string itself is under the limit
-      let quality = JPEG_QUALITY;
+      let quality = 0.85;
       let result  = canvas.toDataURL('image/jpeg', quality);
       let b64     = result.split(',')[1] || '';
- 
       while (b64.length > MAX_BASE64_CHARS && quality > 0.25) {
         quality -= 0.07;
         result   = canvas.toDataURL('image/jpeg', quality);
         b64      = result.split(',')[1] || '';
       }
- 
       resolve(result);
     };
     img.src = dataUrl;
   });
 }
  
+// ═══════════════════════════════════════════════════════
+//  FILE INPUT
+// ═══════════════════════════════════════════════════════
 async function handleFileInput(file) {
   if (!file) return;
- 
   const isImage = file.type.startsWith('image/');
   const isPDF   = file.type === 'application/pdf';
+  if (!isImage && !isPDF) { showError('Please upload an image or PDF file.'); return; }
  
-  if (!isImage && !isPDF) {
-    showError('Please upload an image (PNG, JPG, screenshot, etc.) or a PDF file.');
-    return;
-  }
- 
-  document.getElementById('fileName').innerHTML = `Processing <strong>${file.name}</strong>…`;
+  document.getElementById('fileName').textContent = 'Processing...';
   document.getElementById('fileBar').classList.add('show');
+  document.getElementById('inputPanel').classList.add('has-file');
  
   const reader = new FileReader();
   reader.onload = async e => {
     let dataUrl   = e.target.result;
     let mediaType = file.type;
- 
     if (isImage) {
-      // Check actual base64 string length — that's what Anthropic measures
       const b64raw = dataUrl.split(',')[1] || '';
       if (b64raw.length > MAX_BASE64_CHARS) {
         dataUrl   = await compressImage(dataUrl);
         mediaType = 'image/jpeg';
       }
     }
- 
-    const base64  = dataUrl.split(',')[1];
-    const sizeKB  = Math.round(base64.length / 1024); // base64 KB as sent
-    attachedFile  = { base64, mediaType, name: file.name, isImage, isPDF };
- 
-    document.getElementById('fileName').innerHTML =
-      `<strong>${file.name}</strong> attached (${sizeKB < 1024 ? sizeKB + ' KB' : (sizeKB/1024).toFixed(1) + ' MB'} encoded) — Graze will analyze the actual menu`;
+    const base64 = dataUrl.split(',')[1];
+    const sizeKB = Math.round(base64.length / 1024);
+    const sizeStr = sizeKB < 1024 ? `${sizeKB} KB` : `${(sizeKB/1024).toFixed(1)} MB`;
+    attachedFile = { base64, mediaType, name: file.name, isImage, isPDF };
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSizeBadge').textContent = sizeStr;
     closeAllDDs();
   };
   reader.readAsDataURL(file);
@@ -600,6 +1334,7 @@ async function handleFileInput(file) {
 document.getElementById('clearFile').addEventListener('click', () => {
   attachedFile = null;
   document.getElementById('fileBar').classList.remove('show');
+  document.getElementById('inputPanel').classList.remove('has-file');
   ['imgInput','pdfInput','cameraInput'].forEach(id => { document.getElementById(id).value = ''; });
 });
  
@@ -612,7 +1347,6 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     cb.checked = false; cb.closest('label').classList.remove('checked');
   });
   syncFilterUI();
-  document.getElementById('customRequest').value = '';
   document.getElementById('sortBy').value = 'default';
   document.getElementById('results').style.display = 'none';
   document.getElementById('menuText').value = '';
@@ -622,53 +1356,45 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
  
 // ═══════════════════════════════════════════════════════
-//  ERROR / PROGRESS UI
+//  ERROR / PROGRESS
 // ═══════════════════════════════════════════════════════
 function showError(msg) {
-  const bar = document.getElementById('errorBar');
   document.getElementById('errorMsg').textContent = msg;
-  bar.classList.add('show');
+  document.getElementById('errorBar').classList.add('show');
 }
- 
 function hideError() { document.getElementById('errorBar').classList.remove('show'); }
- 
 function setProgress(text, step) {
   document.getElementById('progressText').textContent = text;
   document.getElementById('progressStep').textContent = step || '';
 }
  
 // ═══════════════════════════════════════════════════════
-//  ANTHROPIC API CALL — STREAMING
-//  Worker pipes Anthropic's SSE stream straight through.
-//  We read chunks, accumulate text, parse JSON at the end.
-//  No Cloudflare timeout because data flows continuously.
+//  CALL CLAUDE — streaming
 // ═══════════════════════════════════════════════════════
 async function callClaude(menuText, file, customRequest) {
-  const systemPrompt = `You are a menu analysis and nutrition estimation expert. Extract every food and drink item from the menu. For each, estimate nutrition using standard restaurant portion sizes. Return ONLY a valid JSON array — no markdown, no explanation.
+  const systemPrompt = `You are a menu analysis and nutrition estimation expert. Extract every food and drink item from the menu. Estimate nutrition using standard restaurant portions. Return ONLY a valid JSON array, no markdown, no explanation.
  
 Each object: {"name":"","description":"","calories":null,"calories_estimated":true,"protein":null,"protein_estimated":true,"carbs":null,"fat":null,"price":null,"tags":[],"note":""}
  
 Tags (exact strings only): halal, kosher, vegan, vegetarian, gluten free, dairy free, no pork, contains pork, contains shellfish, contains dairy, contains nuts, nut free, budget friendly, spicy, high protein
-budget friendly = price ≤ 12. high protein = protein ≥ 30.
+budget friendly = price <= 12. high protein = protein >= 30.
  
-Portions: chicken breast 6oz=280cal/53g, steak 6oz=350cal/34g, salmon 6oz=350cal/34g, shrimp 6oz=170cal/26g, pasta 1cup=220cal/8g, rice 1cup=200cal/4g. Add sauces/oils/sides as appropriate. Always set _estimated:true unless the menu explicitly states the value. Keep description and note to 1 short sentence or empty.
+Portions: chicken breast 6oz=280cal/53g, steak 6oz=350cal/34g, salmon 6oz=350cal/34g, shrimp 6oz=170cal/26g, pasta 1cup=220cal/8g, rice 1cup=200cal/4g. Add sauces and sides as appropriate. Always set _estimated:true unless the value is printed on the menu. Keep description and note to 1 short sentence or empty.
  
 Return ONLY the JSON array. Start with [ end with ].`;
  
   const userContent = [];
-  if (file) {
-    if (file.isImage) {
-      userContent.push({ type:'image', source:{ type:'base64', media_type:file.mediaType, data:file.base64 }});
-      userContent.push({ type:'text', text:`This is a photo of a restaurant menu. Extract and analyze every food and drink item.${customRequest?' Custom context: '+customRequest:''}` });
-    } else if (file.isPDF) {
-      userContent.push({ type:'document', source:{ type:'base64', media_type:'application/pdf', data:file.base64 }});
-      userContent.push({ type:'text', text:`This is a PDF menu. Extract and analyze every food and drink item.${customRequest?' Custom context: '+customRequest:''}` });
-    }
+  if (file?.isImage) {
+    userContent.push({ type:'image', source:{ type:'base64', media_type:file.mediaType, data:file.base64 }});
+    userContent.push({ type:'text', text:`Photo of a restaurant menu. Extract every dish.${customRequest?' Context: '+customRequest:''}` });
+  } else if (file?.isPDF) {
+    userContent.push({ type:'document', source:{ type:'base64', media_type:'application/pdf', data:file.base64 }});
+    userContent.push({ type:'text', text:`PDF menu. Extract every dish.${customRequest?' Context: '+customRequest:''}` });
   } else {
-    userContent.push({ type:'text', text:`Menu:\n\n${menuText}\n\n${customRequest?'Custom context: '+customRequest+'\n\n':''}Extract and analyze every item.` });
+    userContent.push({ type:'text', text:`Menu:\n\n${menuText}\n\n${customRequest?'Context: '+customRequest+'\n\n':''}Extract and analyze every item.` });
   }
  
-  // ── Dynamic max_tokens ──────────────────────────────
+  // Dynamic tokens
   let estimatedItems = 40;
   if (!file && menuText) {
     const lines = menuText.split('\n').filter(l => l.trim().length > 3);
@@ -682,9 +1408,8 @@ Return ONLY the JSON array. Start with [ end with ].`;
     else                   estimatedItems = 100;
   }
   const dynamicTokens = Math.min(Math.max(Math.ceil(estimatedItems * 175) + 500, 2000), 12000);
-  setProgress('Reading menu...', `~${estimatedItems} items estimated · ${dynamicTokens.toLocaleString()} tokens`);
+  setProgress('Analyzing your menu...', `Expecting around ${estimatedItems} items`);
  
-  // ── Streaming fetch ─────────────────────────────────
   const response = await fetch('https://graze-api.sharjeel1078.workers.dev', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -693,7 +1418,6 @@ Return ONLY the JSON array. Start with [ end with ].`;
       max_tokens: dynamicTokens,
       system: systemPrompt,
       messages: [{ role:'user', content:userContent }]
-      // worker automatically adds stream:true
     })
   });
  
@@ -702,88 +1426,63 @@ Return ONLY the JSON array. Start with [ end with ].`;
     throw new Error(err?.error?.message || `API error ${response.status}`);
   }
  
-  // ── Read SSE stream ─────────────────────────────────
-  // Anthropic sends: "data: {type:'content_block_delta', delta:{text:'...'}}"
-  // We collect all text deltas and assemble the full JSON string.
+  // Stream reading
   const reader  = response.body.getReader();
   const decoder = new TextDecoder();
-  let raw    = '';
-  let done   = false;
-  let count  = 0;
-  let buffer = ''; // handles chunks that split across SSE lines
+  let raw = '', done = false, count = 0, buffer = '';
  
   while (!done) {
     const { value, done: streamDone } = await reader.read();
     done = streamDone;
     if (!value) continue;
- 
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep incomplete last line for next chunk
- 
+    buffer = lines.pop();
     for (const line of lines) {
       if (!line.startsWith('data: ')) continue;
       const payload = line.slice(6).trim();
       if (payload === '[DONE]') { done = true; break; }
- 
       let evt;
       try { evt = JSON.parse(payload); } catch { continue; }
- 
       if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
         raw += evt.delta.text;
         const n = (raw.match(/\{/g) || []).length;
         if (n > count) {
           count = n;
-          setProgress(
-            `Receiving results… (${count} item${count!==1?'s':''})`,
-            'Streaming live — results appear when complete'
-          );
+          setProgress(`Receiving results... (${count} item${count!==1?'s':''})`, 'Streaming live');
         }
       }
       if (evt.type === 'error') throw new Error(evt.error?.message || 'Stream error');
     }
   }
  
-  // ── Parse accumulated JSON ──────────────────────────
-  let cleaned = raw.trim()
-    .replace(/^```json\s*/i,'').replace(/^```/,'').replace(/```$/,'').trim();
- 
+  // Parse
+  let cleaned = raw.trim().replace(/^```json\s*/i,'').replace(/^```/,'').replace(/```$/,'').trim();
   try { return JSON.parse(cleaned); } catch {}
- 
   try {
-    const last  = cleaned.lastIndexOf('}');
+    const last = cleaned.lastIndexOf('}');
     if (last !== -1) {
       const fixed = (cleaned.startsWith('[') ? '' : '[') + cleaned.slice(0, last+1) + ']';
       return JSON.parse(fixed);
     }
   } catch {}
- 
-  try {
-    const objs = [];
-    const re = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g;
-    let m;
-    while ((m = re.exec(cleaned)) !== null) {
-      try { const o = JSON.parse(m[0]); if (o.name) objs.push(o); } catch {}
-    }
-    if (objs.length) return objs;
-  } catch {}
- 
-  throw new Error('Could not parse menu response. Try a clearer image or paste the text manually.');
+  const objs = []; const re = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}/g; let m;
+  while ((m = re.exec(cleaned)) !== null) { try { const o=JSON.parse(m[0]); if(o.name) objs.push(o); } catch {} }
+  if (objs.length) return objs;
+  throw new Error('Could not parse the menu response. Try a clearer image or paste the text manually.');
 }
  
 // ═══════════════════════════════════════════════════════
-//  CLIENT-SIDE FILTER
+//  FILTER
 // ═══════════════════════════════════════════════════════
 function applyFilters(items, custom) {
   const c = custom.toLowerCase();
   let maxCal=null, minProt=null, maxPrice=null, cTags=[];
- 
   const cC = c.match(/under\s+(\d+)\s*cal|less than\s+(\d+)\s*cal/);
   if (cC) maxCal = +(cC[1]||cC[2]);
   const pC = c.match(/under\s+\$?(\d+(?:\.\d+)?)|less than\s+\$?(\d+(?:\.\d+)?)/);
   if (pC) maxPrice = +(pC[1]||pC[2]);
   if (c.includes('high protein')) minProt = 30;
- 
   ['halal','kosher','vegan','vegetarian','gluten free','dairy free','no pork','no shellfish','nut free']
     .forEach(t => { if (c.includes(t)) cTags.push(t); });
  
@@ -800,32 +1499,28 @@ function applyFilters(items, custom) {
     if (f==='budget friendly'&& !item.tags.includes('budget friendly'))   return false;
     return true;
   };
- 
   return items.filter(item => {
-    for (const f of activeFilters) if (!pass(item, f)) return false;
-    if (maxCal   && item.calories!==null && item.calories > maxCal)   return false;
-    if (maxPrice && item.price!==null    && item.price    > maxPrice) return false;
-    if (minProt  && (item.protein===null || item.protein < minProt))  return false;
-    for (const t of cTags) if (!pass(item, t)) return false;
+    for (const f of activeFilters) if (!pass(item,f)) return false;
+    if (maxCal   && item.calories!==null && item.calories>maxCal)   return false;
+    if (maxPrice && item.price!==null    && item.price>maxPrice)    return false;
+    if (minProt  && (item.protein===null || item.protein<minProt))  return false;
+    for (const t of cTags) if (!pass(item,t)) return false;
     return true;
   });
 }
  
 // ═══════════════════════════════════════════════════════
-//  CLIENT-SIDE SORT
+//  SORT
 // ═══════════════════════════════════════════════════════
 function applySort(items, key, custom) {
   const c = custom.toLowerCase();
-  let sk  = key;
+  let sk = key;
   if (sk==='default') {
-    if (c.includes('high protein')||c.includes('most protein'))     sk='protein_desc';
-    else if (c.includes('low calorie')||c.includes('fewest cal'))   sk='cal_asc';
-    else if (c.includes('cheapest')||c.includes('lowest price'))    sk='price_asc';
+    if (c.includes('high protein')||c.includes('most protein'))   sk='protein_desc';
+    else if (c.includes('low calorie')||c.includes('fewest cal')) sk='cal_asc';
+    else if (c.includes('cheapest')||c.includes('lowest price'))  sk='price_asc';
   }
-  const nl = (a,b,k) => {
-    if (a[k]===null&&b[k]===null) return 0;
-    if (a[k]===null) return 1; if (b[k]===null) return -1; return 0;
-  };
+  const nl = (a,b,k) => { if(a[k]===null&&b[k]===null)return 0; if(a[k]===null)return 1; if(b[k]===null)return -1; return 0; };
   const s = [...items];
   switch(sk){
     case 'protein_desc': return s.sort((a,b)=>nl(a,b,'protein') ||b.protein-a.protein);
@@ -844,13 +1539,13 @@ function applySort(items, key, custom) {
 // ═══════════════════════════════════════════════════════
 function tagClass(t) {
   if (['halal','kosher','vegan','vegetarian','gluten free','dairy free','no pork','nut free','high protein'].includes(t)) return 'tag-green';
-  if (['budget friendly'].includes(t)) return 'tag-terra';
+  if (t==='budget friendly') return 'tag-gold';
   if (['contains dairy','contains pork','contains shellfish','contains nuts','spicy'].includes(t)) return 'tag-warn';
   return 'tag-gray';
 }
  
 // ═══════════════════════════════════════════════════════
-//  RENDER RESULTS
+//  RENDER
 // ═══════════════════════════════════════════════════════
 function render(items, total, hasEstimates) {
   const resEl   = document.getElementById('results');
@@ -866,25 +1561,21 @@ function render(items, total, hasEstimates) {
   noteEl.style.display = hasEstimates ? 'flex' : 'none';
  
   if (!items.length) {
-    listEl.innerHTML = `<div class="no-results">No items match your current filters.<br>Try adjusting or removing some criteria.</div>`;
+    listEl.innerHTML = `<div class="no-results">No items match your current filters.<br>Try adjusting or clearing some criteria.</div>`;
     return;
   }
  
   items.forEach((item, i) => {
     const card = document.createElement('div');
     card.className = 'item-card';
-    card.style.animationDelay = `${i * 0.035}s`;
+    card.style.animationDelay = `${i*0.035}s`;
  
-    const calStr  = item.calories!==null
-      ? `<span class="meta-val${item.calories_estimated?' estimated':''}"><strong>${item.calories}</strong> cal${item.calories_estimated?' <abbr title="AI estimate" style="text-decoration:none;font-size:10px;color:var(--soft)">(est.)</abbr>':''}</span>` : '';
-    const protStr = item.protein!==null
-      ? `<span class="meta-val${item.protein_estimated?' estimated':''}"><strong>${item.protein}g</strong> protein${item.protein_estimated?' <abbr title="AI estimate" style="text-decoration:none;font-size:10px;color:var(--soft)">(est.)</abbr>':''}</span>` : '';
-    const carbStr = item.carbs!==null ? `<span class="meta-val"><strong>${item.carbs}g</strong> carbs</span>` : '';
-    const fatStr  = item.fat!==null   ? `<span class="meta-val"><strong>${item.fat}g</strong> fat</span>`   : '';
- 
-    const metaHtml = [calStr, protStr, carbStr, fatStr].filter(Boolean).join('');
-    const tagsHtml = (item.tags||[]).map(t => `<span class="tag ${tagClass(t)}">${t}</span>`).join('');
- 
+    const calStr  = item.calories!==null ? `<span class="meta-val"><strong>${item.calories}</strong> cal${item.calories_estimated?'<span class="meta-est">(est.)</span>':''}</span>` : '';
+    const protStr = item.protein!==null  ? `<span class="meta-val"><strong>${item.protein}g</strong> protein${item.protein_estimated?'<span class="meta-est">(est.)</span>':''}</span>` : '';
+    const carbStr = item.carbs!==null    ? `<span class="meta-val"><strong>${item.carbs}g</strong> carbs</span>` : '';
+    const fatStr  = item.fat!==null      ? `<span class="meta-val"><strong>${item.fat}g</strong> fat</span>` : '';
+    const metaHtml = [calStr,protStr,carbStr,fatStr].filter(Boolean).join('');
+    const tagsHtml = (item.tags||[]).map(t=>`<span class="tag ${tagClass(t)}">${t}</span>`).join('');
     const priceHtml = item.price!==null
       ? `<div class="item-price">$${Number(item.price).toFixed(2)}</div>`
       : `<div class="item-price" style="color:var(--soft);font-size:14px;font-family:var(--ff-body)">—</div>`;
@@ -892,13 +1583,12 @@ function render(items, total, hasEstimates) {
     card.innerHTML = `
       <div>
         <div class="item-name">${item.name}</div>
-        ${item.description ? `<div class="item-ingredients">${item.description}</div>` : ''}
-        ${metaHtml ? `<div class="item-meta">${metaHtml}</div>` : ''}
-        ${tagsHtml ? `<div class="item-tags">${tagsHtml}</div>` : ''}
-        ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
+        ${item.description?`<div class="item-ingredients">${item.description}</div>`:''}
+        ${metaHtml?`<div class="item-meta">${metaHtml}</div>`:''}
+        ${tagsHtml?`<div class="item-tags">${tagsHtml}</div>`:''}
+        ${item.note?`<div class="item-note">${item.note}</div>`:''}
       </div>
-      <div class="item-price-col">${priceHtml}</div>`;
- 
+      <div>${priceHtml}</div>`;
     listEl.appendChild(card);
   });
  
@@ -906,51 +1596,36 @@ function render(items, total, hasEstimates) {
 }
  
 // ═══════════════════════════════════════════════════════
-//  ANALYZE BUTTON
+//  ANALYZE
 // ═══════════════════════════════════════════════════════
 document.getElementById('analyzeBtn').addEventListener('click', async () => {
   hideError();
- 
   const rawText    = document.getElementById('menuText').value.trim();
-  const customReq  = document.getElementById('customRequest').value.trim();
+  const customReq  = rawText; // single box handles both
   const sortKey    = document.getElementById('sortBy').value;
   const analyzeBtn = document.getElementById('analyzeBtn');
   const analyzeBar = document.getElementById('analyzingBar');
  
-  // Need something to analyze
   if (!attachedFile && !rawText) {
-    showError('Please attach a menu image or PDF, or paste menu text below.');
+    showError('Please attach a menu photo or paste some menu text to get started.');
     return;
   }
  
-  // Start loading UI
   analyzeBtn.disabled = true;
   analyzeBar.classList.add('show');
   document.getElementById('results').style.display = 'none';
  
-  if (attachedFile?.isImage) {
-    setProgress('Reading menu image...', 'Claude is identifying every dish');
-  } else if (attachedFile?.isPDF) {
-    setProgress('Parsing menu PDF...', 'Extracting all items from the document');
-  } else {
-    setProgress('Analyzing menu text...', 'Identifying dishes and estimating nutrition');
-  }
+  if (attachedFile?.isImage)  setProgress('Reading menu image...', 'Claude is scanning every dish');
+  else if (attachedFile?.isPDF) setProgress('Parsing PDF menu...', 'Extracting all items');
+  else setProgress('Analyzing menu text...', 'Identifying dishes and estimating nutrition');
  
   try {
-    setProgress('Estimating nutrition values...', 'Calculating tokens based on menu size...');
- 
-    const parsed = await callClaude(rawText, attachedFile, customReq);
- 
-    allItems = parsed;
- 
-    setProgress('Applying your filters...', '');
- 
-    const filtered     = applyFilters(allItems, customReq);
-    const sorted       = applySort(filtered, sortKey, customReq);
+    const parsed       = await callClaude(rawText, attachedFile, '');
+    allItems           = parsed;
+    const filtered     = applyFilters(allItems, rawText);
+    const sorted       = applySort(filtered, sortKey, rawText);
     const hasEstimates = allItems.some(i => i.calories_estimated || i.protein_estimated);
- 
     render(sorted, allItems.length, hasEstimates);
- 
   } catch (err) {
     console.error(err);
     showError(`Analysis failed: ${err.message}. Check your connection and try again.`);
@@ -960,22 +1635,24 @@ document.getElementById('analyzeBtn').addEventListener('click', async () => {
   }
 });
  
-// ═══════════════════════════════════════════════════════
-//  RE-FILTER / RE-SORT without re-calling API
-//  If results are already loaded and user changes sort/filters,
-//  re-apply client-side instantly.
-// ═══════════════════════════════════════════════════════
-document.getElementById('sortBy').addEventListener('change', reapply);
- 
-function reapply() {
+document.getElementById('sortBy').addEventListener('change', () => {
   if (!allItems.length) return;
-  const customReq    = document.getElementById('customRequest').value.trim();
-  const sortKey      = document.getElementById('sortBy').value;
-  const filtered     = applyFilters(allItems, customReq);
-  const sorted       = applySort(filtered, sortKey, customReq);
-  const hasEstimates = allItems.some(i => i.calories_estimated || i.protein_estimated);
-  render(sorted, allItems.length, hasEstimates);
-}
+  const rawText  = document.getElementById('menuText').value.trim();
+  const sortKey  = document.getElementById('sortBy').value;
+  const filtered = applyFilters(allItems, rawText);
+  const sorted   = applySort(filtered, sortKey, rawText);
+  const hasEst   = allItems.some(i => i.calories_estimated || i.protein_estimated);
+  render(sorted, allItems.length, hasEst);
+});
+ 
+// ═══════════════════════════════════════════════════════
+//  HERO COLLAPSE
+//  After 2s the full hero animates into a slim sticky
+//  header bar that stays at the top while the user scrolls.
+// ═══════════════════════════════════════════════════════
+setTimeout(() => {
+  document.querySelector('.hero').classList.add('is-collapsed');
+}, 2000);
 </script>
 </body>
 </html>
