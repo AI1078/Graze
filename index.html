@@ -511,19 +511,20 @@ document.addEventListener('click', e => {
 //  FILE INPUT — read as base64, store in state
 // ═══════════════════════════════════════════════════════
 // ─── image compression via canvas ───────────────────────
-// Resizes + re-encodes the image so base64 stays under 4.5MB.
-// PDFs are passed through unchanged.
-const MAX_B64_BYTES  = 4.5 * 1024 * 1024;   // 4.5 MB safety margin under Anthropic's 5 MB cap
-const MAX_DIMENSION  = 1920;                  // longest edge in pixels
-const JPEG_QUALITY   = 0.88;                  // starting quality; reduced further if still too big
+// Anthropic's limit is 5MB on the base64 string itself (not the binary).
+// Base64 is 33% larger than binary, so a 4MB binary = 5.3MB base64 → rejected.
+// We target MAX_BASE64_CHARS so the string always arrives safely under the cap.
+const MAX_BASE64_CHARS = 3.8 * 1024 * 1024;  // ~3.8 MB base64 = ~2.85 MB binary
+const MAX_DIMENSION    = 1920;
+const JPEG_QUALITY     = 0.85;
  
-function compressImage(dataUrl, mimeHint) {
+function compressImage(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
       let { width, height } = img;
  
-      // Scale down if either dimension exceeds MAX_DIMENSION
+      // Scale down if needed
       if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
         if (width >= height) { height = Math.round(height * MAX_DIMENSION / width);  width = MAX_DIMENSION; }
         else                 { width  = Math.round(width  * MAX_DIMENSION / height); height = MAX_DIMENSION; }
@@ -532,19 +533,20 @@ function compressImage(dataUrl, mimeHint) {
       const canvas = document.createElement('canvas');
       canvas.width  = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
  
-      // Try progressively lower quality until under the byte cap
+      // Drop quality until base64 string itself is under the limit
       let quality = JPEG_QUALITY;
       let result  = canvas.toDataURL('image/jpeg', quality);
+      let b64     = result.split(',')[1] || '';
  
-      while (result.length * 0.75 > MAX_B64_BYTES && quality > 0.3) {
-        quality -= 0.08;
+      while (b64.length > MAX_BASE64_CHARS && quality > 0.25) {
+        quality -= 0.07;
         result   = canvas.toDataURL('image/jpeg', quality);
+        b64      = result.split(',')[1] || '';
       }
  
-      resolve(result); // always a JPEG data URL after compression
+      resolve(result);
     };
     img.src = dataUrl;
   });
@@ -561,9 +563,7 @@ async function handleFileInput(file) {
     return;
   }
  
-  // Show a "processing" state while we compress
-  document.getElementById('fileName').innerHTML =
-    `Processing <strong>${file.name}</strong>…`;
+  document.getElementById('fileName').innerHTML = `Processing <strong>${file.name}</strong>…`;
   document.getElementById('fileBar').classList.add('show');
  
   const reader = new FileReader();
@@ -572,20 +572,20 @@ async function handleFileInput(file) {
     let mediaType = file.type;
  
     if (isImage) {
-      const rawBytes = dataUrl.length * 0.75; // approximate base64 → bytes
-      if (rawBytes > MAX_B64_BYTES) {
-        // Compress — this also normalises PNGs/HEICs to JPEG
-        dataUrl   = await compressImage(dataUrl, file.type);
+      // Check actual base64 string length — that's what Anthropic measures
+      const b64raw = dataUrl.split(',')[1] || '';
+      if (b64raw.length > MAX_BASE64_CHARS) {
+        dataUrl   = await compressImage(dataUrl);
         mediaType = 'image/jpeg';
       }
     }
  
-    const base64 = dataUrl.split(',')[1];
-    const sizeKB  = Math.round(base64.length * 0.75 / 1024);
+    const base64  = dataUrl.split(',')[1];
+    const sizeKB  = Math.round(base64.length / 1024); // base64 KB as sent
     attachedFile  = { base64, mediaType, name: file.name, isImage, isPDF };
  
     document.getElementById('fileName').innerHTML =
-      `<strong>${file.name}</strong> attached (${sizeKB < 1024 ? sizeKB + ' KB' : (sizeKB/1024).toFixed(1) + ' MB'}) — Graze will analyze the actual menu`;
+      `<strong>${file.name}</strong> attached (${sizeKB < 1024 ? sizeKB + ' KB' : (sizeKB/1024).toFixed(1) + ' MB'} encoded) — Graze will analyze the actual menu`;
     closeAllDDs();
   };
   reader.readAsDataURL(file);
@@ -988,3 +988,4 @@ function reapply() {
 </script>
 </body>
 </html>
+ 
